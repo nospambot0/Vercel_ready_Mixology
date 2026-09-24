@@ -10,6 +10,31 @@ import type { Catalog, Choice, CustomLevel, FinderAnswers } from './types';
 
 const STORAGE_KEY = 'mixology-pro-current-choice';
 
+async function fileToImageDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+  if (file.size > 6 * 1024 * 1024) throw new Error('Please choose an image smaller than 6 MB.');
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('That image could not be read.'));
+      img.src = objectUrl;
+    });
+    const maxSize = 1000;
+    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Image processing is unavailable.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 const emptyAnswers: FinderAnswers = {
   tastes: [],
   strength: 'Medium',
@@ -71,6 +96,17 @@ function FlavourVisual({ flavour, size = 'md' }: { flavour: Flavour; size?: 'sm'
       </div>
     </div>
   );
+}
+
+function PremixVisual({ premix, catalog, size = 'md' }: { premix: Premix; catalog: Catalog; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClass = size === 'lg' ? 'h-32 w-32' : size === 'sm' ? 'h-16 w-16' : 'h-24 w-24';
+  if (premix.photoUrl) {
+    return <div className={`relative overflow-hidden ${sizeClass} shrink-0 rounded-[1.35rem] border border-white/40 shadow-inner`}><img src={premix.photoUrl} alt={`${premix.name} premix`} className="h-full w-full object-cover" loading="lazy" /><span className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" /></div>;
+  }
+  const ingredients = premix.flavourIds.slice(0, 3).map((id) => catalog.flavours.find((flavour) => flavour.id === id)).filter((flavour): flavour is Flavour => Boolean(flavour));
+  return <div className={`grid ${ingredients.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-0.5 ${sizeClass} shrink-0 overflow-hidden rounded-[1.35rem] border border-white/40 bg-muted shadow-inner`} role="img" aria-label={`${premix.name} flavour collage`}>
+    {ingredients.map((flavour) => <div key={flavour.id} className="min-h-0 min-w-0 overflow-hidden"><FlavourVisual flavour={flavour} size="sm" /></div>)}
+  </div>;
 }
 
 function BrandMark() {
@@ -255,7 +291,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
       setSelectedIds([]);
       setCustomizations({});
       setSelectedMixName('');
-      setSelectedMixId('custom-hillview-mix');
+      setSelectedMixId('custom-mixology-pro-mix');
     } else {
       setStage('taste');
       setAnswers(emptyAnswers);
@@ -398,9 +434,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
               {recommendations.map((recommendation, index) => (
                 <article className={`hv-surface hv-press hv-delay-${index + 1} hv-rise rounded-3xl p-5 md:p-7`} key={recommendation.mix.id} data-testid={`card-recommendation-${recommendation.mix.id}`}>
                   <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                    <div className="flex shrink-0 -space-x-7 sm:block sm:space-x-0">
-                      {recommendation.flavours.slice(0, 3).map((flavour, flavourIndex) => <div className={flavourIndex ? 'hidden sm:block sm:mt-2' : ''} key={flavour.id}><FlavourVisual flavour={flavour} size="lg" /></div>)}
-                    </div>
+                    <div className="flex shrink-0"><PremixVisual premix={recommendation.mix} catalog={catalog} size="lg" /></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3"><div><p className="hv-mono text-[10px] text-accent">{recommendation.title}</p><h2 className="hv-display mt-1 text-3xl">{recommendation.mix.name}</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[9px] text-muted-foreground">{recommendation.strength}</span></div>
                       <p className="mt-2 text-xs text-muted-foreground">{recommendation.pairing}</p>
@@ -466,7 +500,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
 function MixDetailPanel({ recommendation, onClose }: { recommendation: Recommendation; onClose: () => void }) {
   return (
     <div className="fixed inset-x-4 bottom-24 z-30 mx-auto max-w-lg rounded-3xl bg-primary p-5 text-primary-foreground shadow-2xl shadow-primary/30 md:bottom-8" role="dialog" aria-label={`${recommendation.mix.name} details`}>
-      <div className="flex items-start gap-4"><FlavourVisual flavour={recommendation.flavours[0]} size="md" /><div className="min-w-0 flex-1"><p className="hv-mono text-[10px] text-secondary">PREMIX DETAILS</p><h2 className="hv-display mt-1 text-3xl">{recommendation.mix.name}</h2><p className="mt-2 text-sm leading-6 text-primary-foreground/70">{recommendation.mix.description}</p></div><button className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-foreground/10" onClick={onClose} aria-label="Close mix details" data-testid="button-close-details"><X size={17} /></button></div>
+      <div className="flex items-start gap-4"><PremixVisual premix={recommendation.mix} catalog={{ flavours: recommendation.flavours, premixes: [recommendation.mix] }} size="md" /><div className="min-w-0 flex-1"><p className="hv-mono text-[10px] text-secondary">PREMIX DETAILS</p><h2 className="hv-display mt-1 text-3xl">{recommendation.mix.name}</h2><p className="mt-2 text-sm leading-6 text-primary-foreground/70">{recommendation.mix.description}</p></div><button className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-foreground/10" onClick={onClose} aria-label="Close mix details" data-testid="button-close-details"><X size={17} /></button></div>
       <div className="mt-5 flex flex-wrap gap-2">{recommendation.flavours.map((flavour) => <span className="rounded-full border border-primary-foreground/20 px-3 py-1 text-[10px]" key={flavour.id}>{flavour.name}</span>)}</div>
       <p className="mt-4 text-xs text-primary-foreground/60">{recommendation.mix.bestFor}</p>
     </div>
@@ -563,9 +597,31 @@ function createOrb(seed: string) {
 
 function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChange: (next: Catalog) => void; onLogout: () => void }) {
   const [flavourForm, setFlavourForm] = useState({ name: '', brand: '', tags: 'Fruity, Fresh', strength: 'Medium' as Strength, character: '', photoUrl: '' });
-  const [premixForm, setPremixForm] = useState({ name: '', profile: 'Fruity, Fresh', description: '', bestFor: '' });
+  const [premixForm, setPremixForm] = useState({ name: '', profile: 'Fruity, Fresh', description: '', bestFor: '', photoUrl: '' });
   const [selectedIngredients, setSelectedIngredients] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState('');
+
+  const handleFlavourPhoto = async (file?: File) => {
+    if (!file) return;
+    try {
+      const photoUrl = await fileToImageDataUrl(file);
+      setFlavourForm((current) => ({ ...current, photoUrl }));
+      setNotice('Flavour picture selected.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load that picture.');
+    }
+  };
+
+  const handlePremixPhoto = async (file?: File) => {
+    if (!file) return;
+    try {
+      const photoUrl = await fileToImageDataUrl(file);
+      setPremixForm((current) => ({ ...current, photoUrl }));
+      setNotice('Premix picture selected.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load that picture.');
+    }
+  };
 
   const addFlavour = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -636,9 +692,10 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
       profile: premixForm.profile.split(',').map((tag) => tag.trim()).filter(Boolean),
       description: premixForm.description.trim(),
       bestFor: premixForm.bestFor.trim(),
+      photoUrl: premixForm.photoUrl || undefined,
     };
     onChange({ ...catalog, premixes: [...catalog.premixes, nextPremix] });
-    setPremixForm({ name: '', profile: 'Fruity, Fresh', description: '', bestFor: '' });
+    setPremixForm({ name: '', profile: 'Fruity, Fresh', description: '', bestFor: '', photoUrl: '' });
     setSelectedIngredients({});
     setNotice(`${name} was added to premixes.`);
   };
@@ -674,7 +731,7 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
               <label className="block text-xs font-bold" htmlFor="stock-flavour-tags">Taste tags<input id="stock-flavour-tags" className={manageInputClass} value={flavourForm.tags} onChange={(event) => setFlavourForm({ ...flavourForm, tags: event.target.value })} placeholder="Fruity, Fresh" data-testid="input-stock-flavour-tags" /></label>
             </div>
             <label className="mt-4 block text-xs font-bold" htmlFor="stock-flavour-character">Flavour profile<textarea id="stock-flavour-character" className="mt-2 min-h-24 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-secondary" value={flavourForm.character} onChange={(event) => setFlavourForm({ ...flavourForm, character: event.target.value })} placeholder="Bright peach with a soft, juicy finish." data-testid="input-stock-flavour-character" /></label>
-            <label className="mt-4 block text-xs font-bold" htmlFor="stock-flavour-photo">Photo URL <span className="font-normal text-muted-foreground">(optional)</span><input id="stock-flavour-photo" type="url" className={manageInputClass} value={flavourForm.photoUrl} onChange={(event) => setFlavourForm({ ...flavourForm, photoUrl: event.target.value })} placeholder="https://..." data-testid="input-stock-flavour-photo" /></label>
+            <label className="mt-4 block text-xs font-bold" htmlFor="stock-flavour-photo">Flavour picture <span className="font-normal text-muted-foreground">(optional)</span><input id="stock-flavour-photo" type="file" accept="image/*" className="mt-2 block w-full rounded-xl border border-border bg-background p-2 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-xs file:font-semibold" onChange={(event) => handleFlavourPhoto(event.target.files?.[0])} data-testid="input-stock-flavour-photo" />{flavourForm.photoUrl && <img src={flavourForm.photoUrl} alt="Flavour preview" className="mt-3 h-24 w-full rounded-xl object-cover" />}</label>
             <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground" type="submit" data-testid="button-add-stock-flavour"><Plus size={17} /> Add flavour to stock</button>
           </form>
 
@@ -699,7 +756,7 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
             <label className="mt-5 block text-xs font-bold" htmlFor="premix-name">Premix name<input id="premix-name" className={manageInputClass} value={premixForm.name} onChange={(event) => setPremixForm({ ...premixForm, name: event.target.value })} placeholder="e.g. Peach Breeze" data-testid="input-premix-name" /></label>
             <label className="mt-4 block text-xs font-bold" htmlFor="premix-profile">Profile tags<input id="premix-profile" className={manageInputClass} value={premixForm.profile} onChange={(event) => setPremixForm({ ...premixForm, profile: event.target.value })} placeholder="Fruity, Cooling" data-testid="input-premix-profile" /></label>
             <label className="mt-4 block text-xs font-bold" htmlFor="premix-description">Description<textarea id="premix-description" className="mt-2 min-h-20 w-full rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-secondary" value={premixForm.description} onChange={(event) => setPremixForm({ ...premixForm, description: event.target.value })} placeholder="A balanced fruit blend..." data-testid="input-premix-description" /></label>
-            <label className="mt-4 block text-xs font-bold" htmlFor="premix-best-for">Best for<input id="premix-best-for" className={manageInputClass} value={premixForm.bestFor} onChange={(event) => setPremixForm({ ...premixForm, bestFor: event.target.value })} placeholder="For guests who enjoy..." data-testid="input-premix-best-for" /></label>
+            <label className="mt-4 block text-xs font-bold" htmlFor="premix-best-for">Best for<input id="premix-best-for" className={manageInputClass} value={premixForm.bestFor} onChange={(event) => setPremixForm({ ...premixForm, bestFor: event.target.value })} placeholder="For guests who enjoy..." data-testid="input-premix-best-for" /></label><label className="mt-4 block text-xs font-bold" htmlFor="premix-photo">Premix picture <span className="font-normal text-muted-foreground">(optional)</span><input id="premix-photo" type="file" accept="image/*" className="mt-2 block w-full rounded-xl border border-border bg-background p-2 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-xs file:font-semibold" onChange={(event) => handlePremixPhoto(event.target.files?.[0])} data-testid="input-premix-photo" />{premixForm.photoUrl && <img src={premixForm.photoUrl} alt="Premix preview" className="mt-3 h-28 w-full rounded-xl object-cover" />}</label>
             <div className="mt-5"><div className="flex items-center justify-between"><p className="text-xs font-bold">Recipe ingredients</p><span className="text-[10px] text-muted-foreground">{Object.values(selectedIngredients).reduce((sum, value) => sum + (Number(value) || 0), 0)}% selected</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{catalog.flavours.map((flavour) => { const selectedIngredient = selectedIngredients[flavour.id] !== undefined; return <div className={`flex items-center gap-2 rounded-xl border p-2 ${selectedIngredient ? 'border-secondary bg-secondary/10' : 'border-border'}`} key={flavour.id}><label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold"><input type="checkbox" checked={selectedIngredient} onChange={() => toggleIngredient(flavour.id)} data-testid={`checkbox-premix-${flavour.id}`} /><span className="truncate">{flavour.name}</span></label>{selectedIngredient && <div className="flex items-center gap-1"><input type="number" min="0.1" max="100" step="0.1" value={selectedIngredients[flavour.id]} onChange={(event) => setSelectedIngredients({ ...selectedIngredients, [flavour.id]: event.target.value })} className="h-8 w-16 rounded-lg border border-border bg-background px-2 text-right text-xs font-bold outline-none" aria-label={`${flavour.name} percentage`} /><span className="text-[10px] text-muted-foreground">%</span></div>}</div>; })}</div></div>
             <button className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40" type="submit" disabled={!catalog.flavours.length} data-testid="button-add-premix"><Plus size={17} /> Add premix to catalog</button>
           </form>
@@ -709,7 +766,7 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
             <div className="mt-6 space-y-3">
               {catalog.premixes.map((premix) => (
                 <article className="rounded-2xl border border-border bg-background/70 p-4" key={premix.id} data-testid={`card-premix-${premix.id}`}>
-                  <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><h3 className="hv-display text-2xl">{premix.name}</h3><p className="mt-1 text-[10px] text-muted-foreground">{premix.profile.join(' · ')}</p></div><button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => removePremix(premix)} aria-label={`Remove ${premix.name}`} data-testid={`button-remove-premix-${premix.id}`}><Trash2 size={15} /></button></div>
+                  <div className="flex items-start gap-3"><PremixVisual premix={premix} catalog={catalog} size="sm" /><div className="min-w-0 flex-1"><h3 className="hv-display text-2xl">{premix.name}</h3><p className="mt-1 text-[10px] text-muted-foreground">{premix.profile.join(' · ')}</p></div><button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => removePremix(premix)} aria-label={`Remove ${premix.name}`} data-testid={`button-remove-premix-${premix.id}`}><Trash2 size={15} /></button></div>
                   <div className="mt-3 flex flex-wrap gap-2">{premix.recipe.map((ingredient) => <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground" key={ingredient.flavourId}>{catalog.flavours.find((flavour) => flavour.id === ingredient.flavourId)?.name ?? 'Unavailable flavour'} {ingredient.percentage}%</span>)}</div>
                 </article>
               ))}
