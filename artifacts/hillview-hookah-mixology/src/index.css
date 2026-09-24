@@ -464,3 +464,12 @@
     inset: -1px;
   }
 }
+
+@media print {
+  @page { size: 80mm auto; margin: 4mm; }
+  body { background: #fff !important; }
+  body * { visibility: hidden !important; }
+  .pos-receipt, .pos-receipt * { visibility: visible !important; }
+  .pos-receipt { position: absolute !important; left: 0 !important; top: 0 !important; width: 72mm !important; max-width: 72mm !important; margin: 0 !important; padding: 3mm !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
+  .pos-receipt input, .pos-receipt button { display: none !important; }
+}
