@@ -22,16 +22,12 @@ type ResponseLike = {
 
 function getEnv(name: 'SESSION_SECRET' | 'RESEND_API_KEY'): string {
   const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be configured in the Vercel project environment.`);
-  }
+  if (!value) throw new Error(`${name} must be configured in the Vercel project environment.`);
   return value;
 }
 
 function sign(value: string): string {
-  return createHmac('sha256', getEnv('SESSION_SECRET'))
-    .update(value)
-    .digest('base64url');
+  return createHmac('sha256', getEnv('SESSION_SECRET')).update(value).digest('base64url');
 }
 
 function signedSessionValue(value = SESSION_VALUE): string {
@@ -40,15 +36,13 @@ function signedSessionValue(value = SESSION_VALUE): string {
 
 function parseCookies(header: string | string[] | undefined): Record<string, string> {
   const cookieHeader = Array.isArray(header) ? header.join(';') : header ?? '';
-  return Object.fromEntries(
-    cookieHeader.split(';').flatMap((part) => {
-      const separator = part.indexOf('=');
-      if (separator < 0) return [];
-      const key = part.slice(0, separator).trim();
-      const value = decodeURIComponent(part.slice(separator + 1).trim());
-      return key ? [[key, value]] : [];
-    }),
-  );
+  return Object.fromEntries(cookieHeader.split(';').flatMap((part) => {
+    const separator = part.indexOf('=');
+    if (separator < 0) return [];
+    const key = part.slice(0, separator).trim();
+    const value = decodeURIComponent(part.slice(separator + 1).trim());
+    return key ? [[key, value]] : [];
+  }));
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -73,10 +67,7 @@ function sendJson(res: ResponseLike, statusCode: number, body: unknown): void {
 
 function setCookie(res: ResponseLike, name: string, value: string, maxAge: number): void {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  res.setHeader(
-    'Set-Cookie',
-    `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`,
-  );
+  res.setHeader('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`);
 }
 
 function clearCookie(res: ResponseLike, name: string): void {
@@ -94,23 +85,6 @@ function readBody(body: unknown): Record<string, unknown> {
     }
   }
   return {};
-}
-
-function normalizeEmail(value: unknown): string {
-  return typeof value === 'string' ? value.trim().toLowerCase() : '';
-}
-
-function isAllowedStaffEmail(email: string): boolean {
-  if (!email || ! email.includes('@')) return false;
-  const configured = (process.env.STAFF_EMAILS ?? '')
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (configured.length) return configured.includes(email);
-
-  const domain = (process.env.STAFF_EMAIL_DOMAIN ?? 'mixology.monster').trim().toLowerCase();
-  return domain ? email.endsWith(`@${domain}`) : false;
 }
 
 function createOtpToken(email: string, code: string, issuedAt: number): string {
@@ -152,21 +126,25 @@ function isValidPassword(password: string): boolean {
 
 async function sendOtpEmail(email: string, code: string): Promise<void> {
   const apiKey = getEnv('RESEND_API_KEY');
-  const from = 'staff@mixology.monster';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from,
+      from: 'Mixology PRO <staff@mixology.monster>',
       to: [email],
-      subject: 'Your Mixology PRO staff login code',
-      text: `Your Mixology PRO staff login code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
-      html: `<!doctype html><html><body style="margin:0;background:#f4f4f2;font-family:Arial,sans-serif;color:#171717"><div style="max-width:520px;margin:30px auto;background:#fff;padding:32px;border:1px solid #ddd;border-radius:18px"><div style="font-size:11px;letter-spacing:3px;color:#777">MIXOLOGY PRO / STAFF ACCESS</div><h1 style="margin:10px 0 6px;font-size:28px">Your login code</h1><p style="color:#666;font-size:14px;line-height:1.6">Use this one-time verification code to access the staff area.</p><div style="margin:26px 0;text-align:center;background:#f4f4f2;border-radius:14px;padding:20px;font-size:34px;font-weight:800;letter-spacing:8px">${code}</div><p style="color:#777;font-size:12px">This code expires in 10 minutes and can only be used once.</p></div></body></html>`,
+      subject: 'Mixology PRO verification code',
+      text: [
+        'Mixology PRO staff verification',
+        '',
+        `Your verification code is ${code}.`,
+        '',
+        'This code expires in 10 minutes and can only be used once.',
+        'If you did not request this code, you can ignore this email.',
+      ].join('\\n'),
+      html: `<!doctype html><html><body style="margin:0;background:#f5f5f3;font-family:Arial,Helvetica,sans-serif;color:#171717"><div style="max-width:480px;margin:24px auto;padding:24px"><div style="background:#fff;border:1px solid #deded9;border-radius:12px;padding:28px"><p style="margin:0 0 18px;font-size:12px;font-weight:700;letter-spacing:1.5px;color:#555">MIXOLOGY PRO</p><h1 style="margin:0 0 12px;font-size:24px;line-height:1.25">Staff verification code</h1><p style="margin:0;color:#555;font-size:15px;line-height:1.6">Use the code below to sign in to the Mixology PRO staff area.</p><div style="margin:24px 0;padding:18px;text-align:center;background:#f3f3f0;border-radius:10px"><span style="font-size:32px;font-weight:700;letter-spacing:7px;color:#171717">${code}</span></div><p style="margin:0;color:#777;font-size:13px;line-height:1.6">Expires in 10 minutes. This code can only be used once.</p><p style="margin:18px 0 0;color:#999;font-size:12px;line-height:1.5">If you did not request this code, you can ignore this email.</p></div></div></body></html>`,
     }),
   });
-  if (!response) {
-    throw new Error('The email provider did not return a response.');
-  }
+  if (!response) throw new Error('The email provider did not return a response.');
 }
 
 export function handleSession(req: RequestLike, res: ResponseLike): void {
