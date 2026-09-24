@@ -169,6 +169,7 @@ function BottomNav({ choice }: { choice: Choice | null }) {
 }
 
 function AppShell({ children, choice }: { children: ReactNode; choice: Choice | null }) {
+  const [location] = useLocation();
   return (
     <div className="hv-app hv-noise">
       <header className="hv-shell flex items-center justify-between py-5 md:py-7">
@@ -185,6 +186,7 @@ function AppShell({ children, choice }: { children: ReactNode; choice: Choice | 
         </div>
       </header>
       {children}
+      {location === '/' && <HomeIntroAnimation />}
       <BottomNav choice={choice} />
     </div>
   );
@@ -330,13 +332,11 @@ function HomeIntroAnimation() {
 }
 
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
-  const [introEnabled] = useState(() => true);
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
   const shelfFlavours = catalog.flavours.slice(0, 8);
   const shelfPremixes = catalog.premixes.slice(0, 4);
   return (
     <main className="hv-shell hv-page-in">
-      {introEnabled && <HomeIntroAnimation />}
       <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
         <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
