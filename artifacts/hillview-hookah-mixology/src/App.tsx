@@ -1094,7 +1094,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
 function SeoMeta({ title, description, path }: { title: string; description: string; path: string }) {
   useEffect(() => {
     document.title = title;
-    const canonicalUrl = \`https://mixology.monster\${path}\`;
+    const canonicalUrl = `https://mixology.monster\${path}`;
     const setMeta = (selector: string, attribute: 'name' | 'property', content: string) => {
       let element = document.head.querySelector<HTMLMetaElement>(selector);
       if (!element) {
@@ -1123,10 +1123,10 @@ function SeoMeta({ title, description, path }: { title: string; description: str
 }
 
 function FlavourSeoPage({ flavour, related }: { flavour: Flavour; related: Flavour[] }) {
-  const description = \`Explore \${flavour.name} hookah flavour by \${flavour.brand}: \${flavour.character} Discover its flavour profile, strength, and compatible Mixology PRO premixes.\`;
+  const description = `Explore \${flavour.name} hookah flavour by \${flavour.brand}: \${flavour.character} Discover its flavour profile, strength, and compatible Mixology PRO premixes.`;
   return (
     <main className="hv-shell hv-page-in pb-32">
-      <SeoMeta title={\`\${flavour.name} Hookah Flavour | Mixology PRO\`} description={description} path={\`/flavours/\${flavour.id}\`} />
+      <SeoMeta title={`\${flavour.name} Hookah Flavour | Mixology PRO`} description={description} path={`/flavours/\${flavour.id}`} />
       <section className="pt-5 md:pt-10">
         <Link href="/flavours" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft size={15} /> All flavours</Link>
         <div className="mt-7 grid gap-7 md:grid-cols-[auto_1fr] md:items-center">
@@ -1160,7 +1160,7 @@ function FlavourSeoPage({ flavour, related }: { flavour: Flavour; related: Flavo
           <SectionEyebrow>YOU MAY ALSO LIKE</SectionEyebrow>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((item) => (
-              <Link href={\`/flavours/\${item.id}\`} className="hv-surface flex items-center gap-3 rounded-2xl p-3 hover:border-secondary/50" key={item.id}>
+              <Link href={`/flavours/\${item.id}`} className="hv-surface flex items-center gap-3 rounded-2xl p-3 hover:border-secondary/50" key={item.id}>
                 <FlavourVisual flavour={item} size="sm" />
                 <div className="min-w-0"><h3 className="hv-display truncate text-xl">{item.name}</h3><p className="text-[10px] text-muted-foreground">{item.brand}</p></div>
               </Link>
@@ -1185,7 +1185,7 @@ function FlavoursSeoPage({ catalog }: { catalog: Catalog }) {
       <section className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((flavour) => {
           const liveFlavour = catalog.flavours.find((item) => item.id === flavour.id) ?? flavour;
-          return <Link href={\`/flavours/\${flavour.id}\`} className="hv-surface flex gap-4 rounded-[1.5rem] p-4 hover:border-secondary/50" key={flavour.id}>
+          return <Link href={`/flavours/\${flavour.id}`} className="hv-surface flex gap-4 rounded-[1.5rem] p-4 hover:border-secondary/50" key={flavour.id}>
             <FlavourVisual flavour={liveFlavour} size="md" />
             <div className="min-w-0 pt-1"><p className="text-[9px] font-bold tracking-widest text-muted-foreground">{flavour.brand}</p><h2 className="hv-display mt-1 text-2xl">{flavour.name}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{flavour.character}</p><div className="mt-2 flex flex-wrap gap-1">{flavour.tags.slice(0,2).map(tag => <span className="rounded-full bg-muted px-2 py-1 text-[9px]" key={tag}>{tag}</span>)}</div></div>
           </Link>;
@@ -1200,10 +1200,10 @@ function PremixSeoPage({ premix, catalog }: { premix: Premix; catalog: Catalog }
     ...ingredient,
     flavour: catalog.flavours.find((item) => item.id === ingredient.flavourId) ?? defaultFlavours.find((item) => item.id === ingredient.flavourId),
   })).filter((item) => item.flavour);
-  const description = \`\${premix.name} hookah premix recipe: \${premix.description} Explore the flavour percentages and build your own mix with Mixology PRO.\`;
+  const description = `\${premix.name} hookah premix recipe: \${premix.description} Explore the flavour percentages and build your own mix with Mixology PRO.`;
   return (
     <main className="hv-shell hv-page-in pb-32">
-      <SeoMeta title={\`\${premix.name} Hookah Premix Recipe | Mixology PRO\`} description={description} path={\`/premixes/\${premix.id}\`} />
+      <SeoMeta title={`\${premix.name} Hookah Premix Recipe | Mixology PRO`} description={description} path={`/premixes/\${premix.id}`} />
       <section className="pt-5 md:pt-10">
         <Link href="/premixes" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft size={15} /> All premixes</Link>
         <div className="mt-7">
@@ -1244,7 +1244,7 @@ function PremixesSeoPage({ catalog }: { catalog: Catalog }) {
         <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">Explore ready-to-use flavour combinations with transparent percentages. Choose a premix as a starting point or customise the recipe in the Mixology PRO builder.</p>
       </section>
       <section className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((premix) => <Link href={\`/premixes/\${premix.id}\`} className="hv-surface rounded-[1.5rem] p-4 hover:border-secondary/50" key={premix.id}>
+        {items.map((premix) => <Link href={`/premixes/\${premix.id}`} className="hv-surface rounded-[1.5rem] p-4 hover:border-secondary/50" key={premix.id}>
           <div className="flex gap-4"><PremixVisual premix={premix} size="md" /><div className="min-w-0 pt-1"><h2 className="hv-display text-2xl">{premix.name}</h2><p className="mt-1 text-[10px] text-muted-foreground">{premix.profile.join(' · ')}</p></div></div>
           <p className="mt-4 text-xs leading-5 text-muted-foreground">{premix.description}</p>
         </Link>)}
