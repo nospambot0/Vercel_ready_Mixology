@@ -1036,7 +1036,7 @@ function PosPage() {
   const createBill = () => {
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) { alert('Enter a valid amount greater than ₹0.'); return; }
-    const id = \`MX-\${Date.now().toString(36).toUpperCase()}\`;
+    const id = `MX-${Date.now().toString(36).toUpperCase()}`;
     setBill({ id, amount: Math.round(value * 100) / 100, remark: remark.trim(), createdAt: new Date().toISOString(), status: 'PENDING' });
     setEmailState('idle'); setEmailError('');
   };
