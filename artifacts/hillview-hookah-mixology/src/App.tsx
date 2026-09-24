@@ -1041,8 +1041,8 @@ function PosPage() {
     setEmailState('idle'); setEmailError('');
   };
   const resetBill = () => { setBill(null); setAmount(''); setRemark(''); setEmail(''); setEmailState('idle'); setEmailError(''); };
-  const upiUrl = bill ? \`upi://pay?pa=\${encodeURIComponent(PAYEE_UPI)}&pn=\${encodeURIComponent('Mixology')}&am=\${bill.amount.toFixed(2)}&cu=INR&tr=\${encodeURIComponent(bill.id)}&tn=\${encodeURIComponent(bill.remark || 'Mixology POS payment')}\` : '';
-  const qrUrl = upiUrl ? \`https://quickchart.io/qr?text=\${encodeURIComponent(upiUrl)}&size=420&margin=2\` : '';
+  const upiUrl = bill ? `upi://pay?pa=${encodeURIComponent(PAYEE_UPI)}&pn=${encodeURIComponent('Mixology')}&am=${bill.amount.toFixed(2)}&cu=INR&tr=${encodeURIComponent(bill.id)}&tn=${encodeURIComponent(bill.remark || 'Mixology POS payment')}` : '';
+  const qrUrl = upiUrl ? `https://quickchart.io/qr?text=${encodeURIComponent(upiUrl)}&size=420&margin=2` : '';
 
   const sendReceiptEmail = async () => {
     if (!bill || bill.status !== 'PAID') return;
