@@ -288,6 +288,8 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
   const [answers, setAnswers] = useState<FinderAnswers>(emptyAnswers);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [customizations, setCustomizations] = useState<Record<string, CustomLevel>>({});
+  const [percentages, setPercentages] = useState<Record<string, number>>({});
+  const [percentageMode, setPercentageMode] = useState(false);
   const [remarks, setRemarks] = useState('');
   const [selectedMixName, setSelectedMixName] = useState('');
   const [selectedMixId, setSelectedMixId] = useState('custom-hillview-mix');
@@ -299,6 +301,8 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
       setAnswers({ tastes: editChoice.tastes, strength: editChoice.strength, favouriteIds: editChoice.favouriteIds, avoid: editChoice.avoid, surprise: false });
       setSelectedIds(editChoice.flavourIds);
       setCustomizations(editChoice.customizations);
+      setPercentages(editChoice.percentages ?? {});
+      setPercentageMode(Boolean(editChoice.percentages));
       setRemarks(editChoice.remarks);
       setSelectedMixName(editChoice.mixName);
       setSelectedMixId(editChoice.mixId);
@@ -309,6 +313,8 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
       setStage('results');
       setSelectedIds([]);
       setCustomizations({});
+      setPercentages({});
+      setPercentageMode(false);
       setSelectedMixName('');
       setSelectedMixId('custom-mixology-pro-mix');
     } else {
@@ -316,6 +322,8 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
       setAnswers(emptyAnswers);
       setSelectedIds([]);
       setCustomizations({});
+      setPercentages({});
+      setPercentageMode(false);
       setRemarks('');
       setSelectedMixName('');
       setSelectedMixId('custom-hillview-mix');
@@ -333,15 +341,36 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
     favouriteIds: answers.favouriteIds,
     avoid: answers.avoid,
     customizations,
+    ...(percentageMode ? { percentages } : {}),
     remarks,
     chosenAt: new Date().toISOString(),
   };
 
   const updateCustomization = (id: string, value: CustomLevel) => setCustomizations((current) => ({ ...current, [id]: value }));
+
+  const getDefaultPercentages = (ids: string[]) => {
+    const recommendation = recommendations.find((item) => item.mix.id === selectedMixId);
+    if (recommendation && ids.every((id) => recommendation.mix.recipe.some((ingredient) => ingredient.flavourId === id))) {
+      const total = ids.reduce((sum, id) => sum + (recommendation.mix.recipe.find((ingredient) => ingredient.flavourId === id)?.percentage ?? 0), 0);
+      if (total > 0) return Object.fromEntries(ids.map((id) => [id, Math.round(((recommendation.mix.recipe.find((ingredient) => ingredient.flavourId === id)?.percentage ?? 0) / total) * 100)]));
+    }
+    const equal = ids.length ? Math.floor(100 / ids.length) : 0;
+    const remainder = ids.length ? 100 - equal * ids.length : 0;
+    return Object.fromEntries(ids.map((id, index) => [id, equal + (index === ids.length - 1 ? remainder : 0)]));
+  };
+
+  const updatePercentage = (id: string, value: number) => {
+    setPercentages((current) => ({ ...current, [id]: Math.max(0, Math.min(100, Math.round(value / 5) * 5)) }));
+  };
+
+  const percentageTotal = selectedIds.reduce((sum, id) => sum + (percentages[id] ?? 0), 0);
+  const percentageReady = !percentageMode || (selectedIds.length > 0 && percentageTotal === 100);
   const chooseRecommendation = (recommendation: Recommendation) => {
     const ids = recommendation.mix.flavourIds;
     setSelectedIds(ids);
     setCustomizations(Object.fromEntries(ids.map((id) => [id, 'Normal'])));
+    setPercentages(Object.fromEntries(recommendation.mix.recipe.map((ingredient) => [ingredient.flavourId, ingredient.percentage])));
+    setPercentageMode(false);
     setSelectedMixName(recommendation.mix.name);
     setSelectedMixId(recommendation.mix.id);
     setActiveDetail(null);
@@ -477,20 +506,23 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
             <div className="mb-8 flex items-center justify-between"><button className="flex min-h-10 items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" onClick={goBack} data-testid="button-customize-back"><ArrowLeft size={17} /> Back</button><span className="hv-mono text-[10px] text-muted-foreground">YOUR MIX</span></div>
             <SectionEyebrow>MAKE IT YOURS</SectionEyebrow>
             <h1 className="hv-display max-w-2xl text-4xl leading-tight md:text-6xl">A little less guesswork. A lot more you.</h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">Adjust by feel, not percentages. Normal is our balanced starting point.</p>
-            <div className="mt-9 space-y-4">
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">Adjust by feel. If you want, turn on exact percentages and fine-tune each flavour with a slider. Normal is our balanced starting point.</p>
+            <div className="mt-7 flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-muted/30 p-4"><div><p className="text-sm font-bold">Set exact percentages <span className="font-normal text-muted-foreground">(optional)</span></p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Use sliders if you want to control the recipe yourself. Leave this off and our normal recipe stays in charge.</p></div><button type="button" role="switch" aria-checked={percentageMode} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${percentageMode ? 'bg-secondary' : 'bg-muted-foreground/25'}`} onClick={() => { const next = !percentageMode; setPercentageMode(next); if (next) setPercentages(getDefaultPercentages(selectedIds)); }} data-testid="switch-percentage-mode"><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${percentageMode ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
+            {percentageMode && <div className={`text-right text-[10px] font-semibold ${percentageTotal === 100 ? 'text-secondary-foreground' : 'text-destructive'}`}>Total: {percentageTotal}% {percentageTotal === 100 ? '· Ready' : '· Must equal 100%'}</div>}
+            <div className="mt-4 space-y-4">
               {selectedFlavours.map((flavour) => (
                 <div className="hv-surface rounded-3xl p-4 md:p-5" key={flavour.id} data-testid={`card-customize-${flavour.id}`}>
                    <div className="flex items-center gap-4"><FlavourVisual flavour={flavour} size="md" /><div className="min-w-0 flex-1"><h2 className="hv-display mt-1 text-2xl">{flavour.name}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{flavour.character}</p><p className="mt-2 text-[10px] font-semibold text-secondary-foreground">{flavour.strength} body · {flavour.tags.join(' · ')}</p></div><button className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== flavour.id))} aria-label={`Remove ${flavour.name}`} data-testid={`button-remove-${flavour.id}`}><Trash2 size={16} /></button></div>
                   <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-4"><div className="flex flex-wrap gap-2">{flavour.tags.map((tag) => <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground" key={tag}>{tag}</span>)}</div><div className="flex shrink-0 overflow-hidden rounded-xl border border-border bg-muted/50">{(['Less', 'Normal', 'More'] as CustomLevel[]).map((level) => <button key={level} className={`min-h-10 px-2.5 text-[10px] font-bold transition-colors ${customizations[flavour.id] === level ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground'}`} onClick={() => updateCustomization(flavour.id, level)} aria-pressed={customizations[flavour.id] === level} data-testid={`button-custom-${level.toLowerCase()}-${flavour.id}`}>{level}</button>)}</div></div>
+                  {percentageMode && <div className="mt-4 rounded-2xl bg-muted/50 p-3"><div className="flex items-center justify-between gap-3"><span className="text-[11px] font-semibold">Percentage</span><span className="hv-mono text-xs text-secondary-foreground">{percentages[flavour.id] ?? 0}%</span></div><input type="range" min="0" max="100" step="5" value={percentages[flavour.id] ?? 0} onChange={(event) => updatePercentage(flavour.id, Number(event.target.value))} className="mt-2 w-full accent-secondary" aria-label={`Set ${flavour.name} percentage`} data-testid={`slider-percentage-${flavour.id}`} /><div className="mt-1 flex justify-between text-[9px] text-muted-foreground"><span>0%</span><span>100%</span></div></div>}
                 </div>
               ))}
             </div>
             <div className="relative mt-4">
               <button className="flex min-h-14 w-full items-center justify-between rounded-2xl border border-dashed border-secondary/70 px-5 text-sm font-bold text-secondary-foreground hover:bg-secondary/10" onClick={() => setAddOpen((open) => !open)} data-testid="button-add-flavour"><span className="flex items-center gap-2"><Plus size={18} /> Add a flavour</span><ChevronDown size={17} className={addOpen ? 'rotate-180 transition-transform' : 'transition-transform'} /></button>
-               {addOpen && <div className="hv-surface absolute left-0 right-0 top-16 z-20 max-h-80 overflow-y-auto rounded-2xl p-3 shadow-2xl"><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{catalog.flavours.filter((flavour) => !selectedIds.includes(flavour.id)).map((flavour) => <button className="flex items-center gap-2 rounded-xl p-2 text-left hover:bg-muted" key={flavour.id} onClick={() => { setSelectedIds((ids) => [...ids, flavour.id]); updateCustomization(flavour.id, 'Normal'); setAddOpen(false); }} data-testid={`button-add-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><span className="min-w-0"><span className="block truncate text-xs font-bold">{flavour.name}</span><span className="block truncate text-[9px] text-muted-foreground">{flavour.tags.slice(0, 2).join(' · ')}</span></span></button>)}</div></div>}
+               {addOpen && <div className="hv-surface absolute left-0 right-0 top-16 z-20 max-h-80 overflow-y-auto rounded-2xl p-3 shadow-2xl"><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{catalog.flavours.filter((flavour) => !selectedIds.includes(flavour.id)).map((flavour) => <button className="flex items-center gap-2 rounded-xl p-2 text-left hover:bg-muted" key={flavour.id} onClick={() => { const nextIds = [...selectedIds, flavour.id]; setSelectedIds(nextIds); updateCustomization(flavour.id, 'Normal'); if (percentageMode) setPercentages(getDefaultPercentages(nextIds)); setAddOpen(false); }} data-testid={`button-add-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><span className="min-w-0"><span className="block truncate text-xs font-bold">{flavour.name}</span><span className="block truncate text-[9px] text-muted-foreground">{flavour.tags.slice(0, 2).join(' · ')}</span></span></button>)}</div></div>}
             </div>
-            <button className="hv-press mt-8 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-bold text-primary-foreground sm:w-auto" onClick={() => setStage('final')} disabled={selectedIds.length === 0} data-testid="button-review-choice">Review my choice <ArrowRight size={17} /></button>
+            <button className="hv-press mt-8 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-bold text-primary-foreground sm:w-auto" onClick={() => setStage('final')} disabled={selectedIds.length === 0 || !percentageReady} data-testid="button-review-choice">Review my choice <ArrowRight size={17} /></button>
           </div>
         )}
 
@@ -502,7 +534,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
             <div className="mt-8 grid gap-5 md:grid-cols-[1fr_.78fr]">
               <div className="hv-surface rounded-3xl p-5 md:p-7">
                 <div className="flex items-center justify-between border-b border-border/70 pb-4"><span className="hv-mono text-[10px] text-accent">CUSTOMISED MIX</span><span className="text-xs text-muted-foreground">{answers.strength} session</span></div>
-                 <div className="mt-5 space-y-3">{selectedFlavours.length ? selectedFlavours.map((flavour) => <div className="flex items-center gap-3" key={flavour.id}><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{customizations[flavour.id] ?? 'Normal'}</p></div><Check size={16} className="text-secondary" /></div>) : <p className="text-sm text-muted-foreground">Your expert will make a thoughtful surprise.</p>}</div>
+                 <div className="mt-5 space-y-3">{selectedFlavours.length ? selectedFlavours.map((flavour) => <div className="flex items-center gap-3" key={flavour.id}><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{customizations[flavour.id] ?? 'Normal'}{percentageMode ? ` · ${percentages[flavour.id] ?? 0}%` : ''}</p></div><Check size={16} className="text-secondary" /></div>) : <p className="text-sm text-muted-foreground">Your expert will make a thoughtful surprise.</p>}</div>
                 <div className="mt-6 flex flex-wrap gap-2 border-t border-border/70 pt-5">{(answers.tastes.length ? answers.tastes : ['Surprise me']).map((taste) => <span className="rounded-full bg-secondary/15 px-3 py-1.5 text-[10px] font-semibold text-secondary-foreground" key={taste}>{taste}</span>)}</div>
               </div>
               <div className="rounded-3xl bg-primary p-5 text-primary-foreground md:p-7"><p className="hv-mono text-[10px] text-secondary">A NOTE FOR THE EXPERT</p><label className="mt-5 block text-sm font-semibold" htmlFor="remarks">Anything else?</label><textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} className="mt-3 min-h-36 w-full resize-none rounded-2xl border border-primary-foreground/15 bg-primary-foreground/10 p-4 text-sm leading-6 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-secondary focus:outline-none" placeholder="Tell us about the mood, the table, or anything to leave out." data-testid="textarea-remarks" /><p className="mt-4 text-xs leading-5 text-primary-foreground/55">This note travels with your mix to Mixology PRO Expert on WhatsApp.</p></div>
