@@ -145,7 +145,7 @@ function maskEmail(email: string): string {
 
 async function sendOtpEmail(email: string, code: string): Promise<void> {
   const apiKey = getEnv('RESEND_API_KEY');
-  const from = process.env.RESEND_FROM_EMAIL || 'staff@mixology.monster';
+  const from = 'staff@mixology.monster';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
