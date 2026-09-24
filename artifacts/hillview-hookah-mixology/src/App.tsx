@@ -8,7 +8,7 @@ import { getBatchRecipe } from './logic/recipe';
 import { getWhatsAppUrl } from './logic/whatsapp';
 import type { Catalog, Choice, CustomLevel, FinderAnswers } from './types';
 
-const STORAGE_KEY = 'hillview-hookah-current-choice';
+const STORAGE_KEY = 'mixology-pro-current-choice';
 
 const emptyAnswers: FinderAnswers = {
   tastes: [],
@@ -26,7 +26,7 @@ function readChoice(): Choice | null {
     return {
       ...parsed,
       mixId: parsed.mixId ?? 'custom-hillview-mix',
-      mixName: parsed.mixName ?? 'Hillview Custom Mix',
+      mixName: parsed.mixName ?? 'Mixology PRO Custom Mix',
       flavourIds: parsed.flavourIds ?? [],
       tastes: parsed.tastes ?? [],
       strength: parsed.strength ?? 'Medium',
@@ -147,7 +147,7 @@ function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () =
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
         <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
         <div className="relative max-w-2xl">
-          <SectionEyebrow>HILLVIEW / TABLESIDE GUIDE 01</SectionEyebrow>
+          <SectionEyebrow>MIXOLOGY PRO / TABLESIDE GUIDE 01</SectionEyebrow>
           <p className="mb-5 max-w-md text-sm leading-6 text-primary-foreground/65">A quiet way to find a flavour you will actually enjoy.</p>
           <h1 className="hv-display text-[3.4rem] leading-[.98] tracking-[-.055em] md:text-[5.6rem]">Find Your<br /><span className="text-secondary">Perfect Hookah.</span></h1>
           <p className="mt-7 max-w-md text-base leading-7 text-primary-foreground/75 md:text-lg">Tell us what you like. We’ll create the mix.</p>
@@ -162,7 +162,7 @@ function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () =
         </div>
         <div className="relative mt-14 flex items-end justify-between border-t border-primary-foreground/15 pt-5 md:absolute md:bottom-8 md:right-12 md:mt-0 md:block md:border-0 md:pt-0">
           <div className="hidden text-right md:block">
-            <p className="hv-mono text-[9px] text-primary-foreground/40">THE HILLVIEW NOTE</p>
+            <p className="hv-mono text-[9px] text-primary-foreground/40">THE MIXOLOGY PRO NOTE</p>
              <p className="mt-2 max-w-[150px] text-sm leading-5 text-primary-foreground/70">No guesswork. No wrong answers.</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-primary-foreground/45 md:mt-16">
@@ -200,7 +200,7 @@ function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () =
           {[
             ['01', 'Name your mood', 'A few familiar taste words are all we need.'],
             ['02', 'Meet your match', 'We’ll bring back three blends worth trying.'],
-            ['03', 'Send it over', 'Your finished choice goes straight to Hillview.'],
+            ['03', 'Send it over', 'Your finished choice goes straight to Mixology PRO.'],
           ].map(([number, title, copy]) => (
             <div className="border-l border-secondary/50 pl-4" key={number}>
               <span className="font-mono text-xs text-secondary">{number}</span>
@@ -271,7 +271,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
   const selectedFlavours = selectedIds.map((id) => catalog.flavours.find((flavour) => flavour.id === id)).filter((flavour): flavour is Flavour => Boolean(flavour));
   const finalChoice: Choice = {
     mixId: selectedMixId,
-    mixName: selectedMixName || 'Hillview Custom Mix',
+    mixName: selectedMixName || 'Mixology PRO Custom Mix',
     flavourIds: selectedIds,
     tastes: answers.tastes,
     strength: answers.strength,
@@ -535,7 +535,7 @@ function ChoicePage({ choice, onEdit, onReset, catalog }: { choice: Choice | nul
         ) : (
           <>
             <div className="mt-9 grid gap-4 md:grid-cols-[1.05fr_.95fr]">
-              <div className="rounded-[2rem] bg-primary p-6 text-primary-foreground md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-secondary">THE MIX</span><Flame size={19} className="text-secondary" /></div><h2 className="hv-display mt-6 text-3xl">{choice.mixName || 'Hillview Custom Mix'}</h2><div className="mt-6 space-y-4">{selected.map((flavour) => <div className="flex items-center gap-3" key={flavour.id} data-testid={`text-saved-flavour-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><div><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-primary-foreground/55">{choice.customizations[flavour.id] ?? 'Normal'}</p></div></div>)}</div><div className="mt-8 border-t border-primary-foreground/15 pt-5"><p className="hv-mono text-[9px] text-primary-foreground/50">MOOD</p><p className="mt-2 text-sm">{choice.tastes.length ? choice.tastes.join(' · ') : 'A Hillview surprise'}</p></div></div>
+              <div className="rounded-[2rem] bg-primary p-6 text-primary-foreground md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-secondary">THE MIX</span><Flame size={19} className="text-secondary" /></div><h2 className="hv-display mt-6 text-3xl">{choice.mixName || 'Mixology PRO Custom Mix'}</h2><div className="mt-6 space-y-4">{selected.map((flavour) => <div className="flex items-center gap-3" key={flavour.id} data-testid={`text-saved-flavour-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><div><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-primary-foreground/55">{choice.customizations[flavour.id] ?? 'Normal'}</p></div></div>)}</div><div className="mt-8 border-t border-primary-foreground/15 pt-5"><p className="hv-mono text-[9px] text-primary-foreground/50">MOOD</p><p className="mt-2 text-sm">{choice.tastes.length ? choice.tastes.join(' · ') : 'A Hillview surprise'}</p></div></div>
               <div className="hv-surface rounded-[2rem] p-6 md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-accent">TABLE NOTES</span><span className="rounded-full bg-muted px-3 py-1 text-[10px] font-semibold">{choice.strength}</span></div><p className="mt-8 text-sm leading-7">{choice.remarks || 'No extra notes — the blend can speak for itself.'}</p><div className="mt-8 border-t border-border/70 pt-5"><p className="text-xs font-bold">Avoiding</p><p className="mt-2 text-xs text-muted-foreground">{choice.avoid.length ? choice.avoid.join(' · ') : 'Nothing noted'}</p></div></div>
             </div>
              <div className="mt-6 flex flex-col gap-3 sm:flex-row"><button className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-card px-5 text-sm font-bold hover:bg-muted" onClick={onEdit} data-testid="button-edit-choice"><Edit3 size={16} /> EDIT</button><button className="flex min-h-13 flex-[1.5] items-center justify-center gap-2 rounded-2xl bg-secondary px-5 text-sm font-bold text-secondary-foreground shadow-lg shadow-secondary/15" onClick={() => openWhatsApp(choice, catalog)} data-testid="button-order-whatsapp"><Send size={16} /> ORDER ON WHATSAPP</button><button className="flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive" onClick={onReset} data-testid="button-start-over"><RotateCcw size={16} /> START OVER</button></div>
@@ -826,7 +826,7 @@ function AgeGate() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
           <Flame size={25} />
         </div>
-        <SectionEyebrow>HILLVIEW / AGE CHECK</SectionEyebrow>
+        <SectionEyebrow>MIXOLOGY PRO / AGE CHECK</SectionEyebrow>
         <h1 id="age-gate-title" className="hv-display text-4xl md:text-5xl">Are you 18 or older?</h1>
         <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-primary-foreground/70">
           This site contains information about hookah and tobacco-related products. You must be 18 or older to enter.
