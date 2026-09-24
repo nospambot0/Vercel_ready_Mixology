@@ -194,13 +194,16 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
   return <p className="hv-mono mb-4 text-[10px] font-medium text-accent">{children}</p>;
 }
 
-function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () => void }) {
+function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
+  const shelfFlavours = catalog.flavours.slice(0, 8);
+  const shelfPremixes = catalog.premixes.slice(0, 4);
   return (
     <main className="hv-shell hv-page-in">
       <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
         <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+        <div className="absolute right-[12%] top-[34%] hidden h-36 w-36 rounded-full border border-primary-foreground/10 md:block" />
         <div className="relative max-w-2xl">
           <SectionEyebrow>MIXOLOGY PRO / TABLESIDE GUIDE 01</SectionEyebrow>
           <p className="mb-5 max-w-md text-sm leading-6 text-primary-foreground/65">A quiet way to find a flavour you will actually enjoy.</p>
@@ -218,7 +221,7 @@ function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () =
         <div className="relative mt-14 flex items-end justify-between border-t border-primary-foreground/15 pt-5 md:absolute md:bottom-8 md:right-12 md:mt-0 md:block md:border-0 md:pt-0">
           <div className="hidden text-right md:block">
             <p className="hv-mono text-[9px] text-primary-foreground/40">THE MIXOLOGY PRO NOTE</p>
-             <p className="mt-2 max-w-[150px] text-sm leading-5 text-primary-foreground/70">No guesswork. No wrong answers.</p>
+            <p className="mt-2 max-w-[150px] text-sm leading-5 text-primary-foreground/70">No guesswork. No wrong answers.</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-primary-foreground/45 md:mt-16">
             <span className="h-2 w-2 rounded-full bg-secondary" /> Guided in under a minute
@@ -246,29 +249,102 @@ function HomePage({ onFind, onSurprise }: { onFind: () => void; onSurprise: () =
         </div>
       </section>
 
-      <section className="grid gap-4 border-t border-border/70 py-10 md:grid-cols-[1.1fr_1fr] md:py-14">
-        <div>
-          <SectionEyebrow>THE EASY PART</SectionEyebrow>
-          <h2 className="hv-display max-w-md text-3xl md:text-4xl">A good mix starts with a good question.</h2>
+      <section className="border-y border-border/70 py-12 md:py-16">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <SectionEyebrow>THE FLAVOUR SHELF</SectionEyebrow>
+            <h2 className="hv-display text-4xl md:text-5xl">Explore the menu.</h2>
+          </div>
+          <button onClick={onFind} className="hidden items-center gap-2 text-xs font-bold uppercase tracking-wider text-secondary md:flex">See all flavours <ArrowRight size={15} /></button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3 md:gap-5">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {shelfFlavours.map((flavour, index) => (
+            <button key={flavour.id} onClick={onFind} className="hv-press group overflow-hidden rounded-3xl border border-border bg-card/60 p-3 text-left hover:-translate-y-1 hover:border-secondary" data-testid={`button-shelf-${flavour.id}`}>
+              <div className="relative overflow-hidden rounded-[1.35rem] bg-muted">
+                <FlavourVisual flavour={flavour} size="lg" />
+                <span className="absolute left-2 top-2 rounded-full bg-background/75 px-2 py-1 font-mono text-[8px] uppercase tracking-wider text-foreground backdrop-blur">{String(index + 1).padStart(2, '0')}</span>
+              </div>
+              <div className="px-1 pb-1 pt-3">
+                <p className="truncate text-sm font-bold">{flavour.name}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{flavour.tags.slice(0, 2).join(' · ')}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button onClick={onFind} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-3 text-xs font-bold uppercase tracking-wider md:hidden">Explore all flavours <ArrowRight size={15} /></button>
+      </section>
+
+      <section className="py-14 md:py-20">
+        <div className="grid gap-8 md:grid-cols-[.8fr_1.2fr] md:items-end">
+          <div>
+            <SectionEyebrow>SIGNATURE BLENDS</SectionEyebrow>
+            <h2 className="hv-display text-4xl md:text-5xl">Ready-made, never boring.</h2>
+            <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">Start with one of our balanced premixes, or open the finder and build something around your own taste.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {shelfPremixes.map((premix) => (
+              <button key={premix.id} onClick={onFind} className="hv-press group flex items-center gap-3 rounded-3xl border border-border bg-card/60 p-3 text-left hover:-translate-y-1 hover:border-secondary" data-testid={`button-premix-shelf-${premix.id}`}>
+                <PremixVisual premix={premix} size="sm" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold">{premix.name}</span>
+                  <span className="mt-1 block truncate text-[10px] text-muted-foreground">{premix.profile.slice(0, 2).join(' · ')}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground md:px-12 md:py-16">
+        <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full border border-secondary/20" />
+        <div className="absolute -bottom-24 left-1/2 h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <SectionEyebrow>BUILD YOUR OWN</SectionEyebrow>
+            <h2 className="hv-display max-w-2xl text-4xl leading-tight md:text-5xl">Not sure what to choose?</h2>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-primary-foreground/65">Answer four quick questions and Mixology PRO will narrow the menu down to three directions made for your taste.</p>
+          </div>
+          <button onClick={onFind} className="hv-press flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground">OPEN THE FINDER <ArrowRight size={18} /></button>
+        </div>
+      </section>
+
+      <section className="grid gap-5 border-b border-border/70 py-14 md:grid-cols-3 md:py-20">
+        {[
+          ['01', 'Choose a mood', 'Fruity, fresh, sweet, floral, cooling — start wherever your taste starts.'],
+          ['02', 'Fine-tune it', 'Pick flavours, adjust the balance, and optionally set exact percentages.'],
+          ['03', 'Send the order', 'Save your final mix and send the recipe directly to the Mixology PRO team.'],
+        ].map(([number, title, copy]) => (
+          <div className="hv-surface rounded-3xl p-6" key={number}>
+            <span className="font-mono text-xs text-secondary">{number}</span>
+            <h3 className="mt-10 text-lg font-bold">{title}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{copy}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="py-14 pb-28 md:py-20 md:pb-32">
+        <div className="mx-auto max-w-3xl text-center">
+          <SectionEyebrow>QUESTIONS, BEFORE THE CLOUD</SectionEyebrow>
+          <h2 className="hv-display text-4xl md:text-5xl">A few things worth knowing.</h2>
+        </div>
+        <div className="mx-auto mt-8 max-w-3xl divide-y divide-border rounded-3xl border border-border bg-card/50">
           {[
-            ['01', 'Name your mood', 'A few familiar taste words are all we need.'],
-            ['02', 'Meet your match', 'We’ll bring back three blends worth trying.'],
-            ['03', 'Send it over', 'Your finished choice goes straight to Mixology PRO.'],
-          ].map(([number, title, copy]) => (
-            <div className="border-l border-secondary/50 pl-4" key={number}>
-              <span className="font-mono text-xs text-secondary">{number}</span>
-              <h3 className="mt-7 text-sm font-bold">{title}</h3>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">{copy}</p>
-            </div>
+            ['Do I need to know flavour names?', 'No. Start with taste words and the finder will narrow things down for you.'],
+            ['Can I make my own mix?', 'Yes. You can choose your own flavours and optionally use the percentage sliders for an exact recipe.'],
+            ['Can I change my mind?', 'Absolutely. Your saved choice can be edited before you send it to the team.'],
+          ].map(([question, answer]) => (
+            <details key={question} className="group p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold">
+                {question}<ChevronDown size={17} className="shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{answer}</p>
+            </details>
           ))}
         </div>
       </section>
     </main>
   );
 }
-
 function StepHeader({ step, total, onBack }: { step: number; total: number; onBack?: () => void }) {
   return (
     <div className="mb-8">
@@ -887,7 +963,7 @@ function NotFoundPage() {
 function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalog, onCatalogChange }: { choice: Choice | null; onSave: (choice: Choice) => void; onEdit: () => void; onReset: () => void; launch: 'fresh' | 'surprise' | 'edit'; setLaunch: (launch: 'fresh' | 'surprise' | 'edit') => void; catalog: Catalog; onCatalogChange: (next: Catalog) => void }) {
   return (
     <Switch>
-      <Route path="/"><HomePage onFind={() => { setLaunch('fresh'); }} onSurprise={() => { setLaunch('surprise'); }} /></Route>
+      <Route path="/"><HomePage onFind={() => { setLaunch('fresh'); }} onSurprise={() => { setLaunch('surprise'); }} catalog={catalog} /></Route>
       <Route path="/find"><FinderPage onSave={onSave} editChoice={choice} launch={launch} catalog={catalog} /></Route>
       <Route path="/choice"><ChoicePage choice={choice} onEdit={onEdit} onReset={onReset} catalog={catalog} /></Route>
       <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
