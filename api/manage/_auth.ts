@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 const SESSION_COOKIE = 'hillview_manage_session';
 const SESSION_VALUE = 'authenticated';
 const SESSION_MAX_AGE = 8 * 60 * 60;
-const MANAGE_PASSWORD = 'adminhillview';
+
 
 type RequestLike = {
   body?: unknown;
