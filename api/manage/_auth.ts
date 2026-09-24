@@ -50,7 +50,7 @@ function parseCookies(header: string | string[] | undefined): Record<string, str
   );
 }
 
-function isValidSession(value: string | undefined): boolean {
+export function isValidSession(value: string | undefined): boolean {
   if (!value?.startsWith('s:')) return false;
   const unsignedValue = value.slice(2).split('.')[0];
   const signature = value.slice(2).slice(unsignedValue.length + 1);
