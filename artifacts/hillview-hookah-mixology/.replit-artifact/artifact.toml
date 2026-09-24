@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Hillview Hookah Mixology"
+description = "A mobile-first customer experience that guides guests through taste preferences, recommends personalized hookah mixes, and sends the chosen order to Hillview via WhatsApp without requiring login or a backend."
+version = "1.0.0"
+id = "artifacts/hillview-hookah-mixology"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18728
+
+[services.development]
+run = "pnpm --filter @workspace/hillview-hookah-mixology run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hillview-hookah-mixology", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/hillview-hookah-mixology/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18728"
+BASE_PATH = "/"

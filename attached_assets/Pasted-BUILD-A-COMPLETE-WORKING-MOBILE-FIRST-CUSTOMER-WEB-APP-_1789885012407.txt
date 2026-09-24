@@ -1,0 +1,1162 @@
+BUILD A COMPLETE, WORKING, MOBILE-FIRST CUSTOMER WEB APP CALLED:
+
+"HILLVIEW HOOKAH MIXOLOGY"
+
+This is the CUSTOMER-FACING version of the Hillview Hookah Mixology application.
+
+IMPORTANT:
+- Build the actual working application, not a mockup.
+- Make it run successfully in Replit.
+- Make it extremely intuitive for customers who know nothing about hookah flavours.
+- Mobile-first design is the highest priority.
+- The experience should feel premium, modern and interactive.
+- Do not ask the customer to understand percentages or technical flavour terminology.
+- The customer simply chooses their taste preferences and the app recommends suitable mixes.
+- The customer can then send their customized choice directly to the Hillview Hookah Expert through WhatsApp.
+- Do not require login.
+- Do not require an API key.
+- Use localStorage where useful.
+- Make the application work without a backend.
+
+==================================================
+1. BRANDING
+==================================================
+
+App name:
+
+HILLVIEW
+HOOKAH MIXOLOGY
+
+Subtitle:
+
+"Find Your Perfect Hookah"
+
+Use a premium lounge aesthetic:
+
+- Black / charcoal background
+- Dark glassmorphism cards
+- Gold / bronze accent
+- Elegant typography
+- Large visual cards
+- Smooth transitions
+- Premium cafe/lounge feeling
+- High-quality flavour imagery
+- Mobile-friendly buttons
+
+The interface should feel like a premium restaurant/hookah lounge ordering experience.
+
+==================================================
+2. CUSTOMER JOURNEY
+==================================================
+
+The customer journey must be:
+
+WELCOME
+↓
+WHAT KIND OF TASTE?
+↓
+HOW STRONG?
+↓
+WHAT FLAVOURS DO YOU LIKE?
+↓
+DO YOU WANT SOMETHING EXOTIC?
+↓
+APP RECOMMENDS MIXES
+↓
+CUSTOMER SELECTS ONE
+↓
+CUSTOMER CAN CUSTOMIZE
+↓
+ORDER CUSTOMISED CHOICE
+↓
+WHATSAPP OPENS WITH THE CHOICE ALREADY WRITTEN
+
+The customer should be able to complete this in approximately 30–60 seconds.
+
+==================================================
+3. WELCOME SCREEN
+==================================================
+
+Create an attractive landing screen.
+
+Show:
+
+HILLVIEW
+HOOKAH MIXOLOGY
+
+"Find Your Perfect Hookah"
+
+Text:
+
+"Tell us what you like.
+We'll create the mix."
+
+Button:
+
+[ FIND MY HOOKAH ]
+
+Also show a beautiful hookah/flavour visual.
+
+==================================================
+4. STEP 1 — CHOOSE YOUR TASTE
+==================================================
+
+Title:
+
+"WHAT ARE YOU IN THE MOOD FOR?"
+
+Subtitle:
+
+"Pick one or more."
+
+Create large visual cards.
+
+Choices:
+
+🍓 FRUITY
+🍬 SWEET
+❄️ FRESH
+🌿 MINTY
+🌶️ SPICED
+🌴 EXOTIC
+🌸 FLORAL
+🍋 CITRUS
+🍏 TART
+🧊 COOLING
+🥤 CREAMY
+🚬 CLASSIC
+
+Allow multiple selections.
+
+Each card should have:
+- Large visual image/icon
+- Name
+- Short description
+
+Examples:
+
+FRUITY
+"Juicy, refreshing & vibrant"
+
+SWEET
+"Smooth, candy-like & dessert-inspired"
+
+FRESH
+"Bright, refreshing & crisp"
+
+MINTY
+"Cool, icy & refreshing"
+
+SPICED
+"Warm, aromatic & distinctive"
+
+EXOTIC
+"Unique combinations & adventurous flavours"
+
+Do NOT require the customer to understand technical flavour terminology.
+
+Button:
+
+[ CONTINUE ]
+
+==================================================
+5. STEP 2 — STRENGTH
+==================================================
+
+Title:
+
+"HOW STRONG DO YOU LIKE IT?"
+
+Show 3 huge cards:
+
+LIGHT
+"Smooth & easy"
+
+MEDIUM
+"Balanced & flavourful"
+
+STRONG
+"Bold & intense"
+
+Only one can be selected.
+
+Use visual intensity indicators.
+
+Default:
+MEDIUM
+
+Button:
+
+[ CONTINUE ]
+
+==================================================
+6. STEP 3 — FLAVOUR PREFERENCES
+==================================================
+
+Title:
+
+"ANY FLAVOURS YOU LOVE?"
+
+Subtitle:
+
+"Choose as many as you like."
+
+Show flavour cards with REAL / HIGH-QUALITY VISUAL IMAGES NEXT TO OR ABOVE THE FLAVOUR NAME.
+
+This is VERY IMPORTANT.
+
+Every flavour must have a visual image.
+
+Example:
+
+┌─────────────────────┐
+│                     │
+│    [FLAVOUR IMAGE]  │
+│                     │
+│    Lady Killer      │
+│       ADALYA        │
+│                     │
+│       + ADD         │
+└─────────────────────┘
+
+Use actual flavour/product images wherever legally/technically available.
+
+If actual product photography is unavailable, use beautiful realistic ingredient/flavour photography representing the flavour.
+
+For example:
+
+Blue Berry:
+blueberries
+
+Orange:
+fresh orange
+
+Grape:
+grapes
+
+Rose:
+rose petals
+
+Mint:
+fresh mint leaves
+
+Vanilla:
+vanilla pods
+
+Double Apple:
+red and green apples
+
+Watermelon:
+watermelon
+
+Mango:
+fresh mango
+
+Kiwi:
+kiwi
+
+American Freezer:
+icy blue/cooling visual
+
+Sub-Zero:
+ice/mint/cooling visual
+
+Astro Love:
+exotic fruity visual
+
+Lady Killer:
+tropical fruit visual
+
+Love 66:
+tropical fruit / watermelon / passionfruit style visual
+
+etc.
+
+Do NOT use plain text-only flavour lists.
+
+The image should visually sit immediately next to or above the flavour name.
+
+==================================================
+7. FLAVOUR DATABASE
+==================================================
+
+Use these exact brands and flavours:
+
+AL FAUZ:
+- Blue Berry
+- Orange
+- Grape
+- Rose
+
+AL FAKHER:
+- Mint
+- Vanilla
+- Double Apple
+
+AFZAL:
+- Watermelon
+- Pan Raas
+- Mango
+- Cigar
+
+ROYAL SMOKING:
+- Spring Water
+- Kiwi
+
+HUQQLE PUFF:
+- American Freezer
+
+STARWALKER:
+- Sub-Zero
+- Astro Love
+
+MAHROOSH:
+- God Father
+- Red Devil
+
+ADALYA:
+- Lady Killer
+- Love 66
+
+Total:
+20 flavours
+8 brands
+
+Do not change these names.
+
+==================================================
+8. FLAVOUR TAGGING SYSTEM
+==================================================
+
+Create an internal profile for each flavour.
+
+Each flavour should contain:
+
+brand
+name
+tags
+sweetness
+freshness
+cooling
+fruitiness
+spice
+floral
+exotic
+strength compatibility
+
+Use a 0–100 scale internally.
+
+Example:
+
+Lady Killer:
+- Fruity: 95
+- Sweet: 75
+- Exotic: 90
+- Fresh: 50
+- Cooling: 25
+- Floral: 10
+- Spiced: 0
+
+Mint:
+- Minty: 100
+- Fresh: 95
+- Cooling: 95
+- Sweet: 15
+
+Blue Berry:
+- Fruity: 95
+- Sweet: 70
+- Exotic: 40
+
+Pan Raas:
+- Spiced: 80
+- Exotic: 85
+
+These values are used ONLY by the recommendation engine.
+
+They should not be presented as scientific measurements.
+
+==================================================
+9. SMART RECOMMENDATION ENGINE
+==================================================
+
+This is the most important feature.
+
+After the customer completes the questions, calculate their preference profile.
+
+Example:
+
+Customer selects:
+
+FRUITY
+EXOTIC
+SWEET
+
+Strength:
+MEDIUM
+
+Preferred flavours:
+Mango
+Kiwi
+
+The app should recommend several mixes.
+
+Show:
+
+"WE FOUND YOUR MATCH"
+
+Then:
+
+RECOMMENDED MIX #1
+"EXOTIC TROPIC"
+
+Lady Killer — ADALYA
+Mango — AFZAL
+Kiwi — ROYAL SMOKING
+
+Profile:
+🍓 Fruity
+🌴 Exotic
+🍬 Sweet
+
+Strength:
+MEDIUM
+
+Description:
+"An exotic fruity blend with tropical sweetness and a refreshing finish."
+
+Buttons:
+
+[ CHOOSE THIS MIX ]
+
+[ SEE DETAILS ]
+
+Then show:
+
+RECOMMENDED MIX #2
+
+RECOMMENDED MIX #3
+
+Create at least 3 recommendations.
+
+Rank recommendations internally based on matching the customer's selected preferences.
+
+Do NOT show numerical scores to the customer.
+
+Instead use descriptions such as:
+
+"Excellent match for your taste"
+
+"Balanced fruity choice"
+
+"Bold exotic choice"
+
+==================================================
+10. MIX CREATION
+==================================================
+
+The recommendation engine should combine available flavours.
+
+For example:
+
+FRUITY + SWEET:
+
+Lady Killer
+Blue Berry
+Mango
+
+FRESH + MINTY:
+
+Mint
+Sub-Zero
+American Freezer
+
+EXOTIC + FRUITY:
+
+Lady Killer
+Love 66
+Mango
+Kiwi
+
+SPICED + EXOTIC:
+
+Pan Raas
+Mango
+Rose
+
+CLASSIC:
+
+Double Apple
+Mint
+Cigar
+
+The combinations must be generated dynamically from the flavour database rather than hardcoded to only these examples.
+
+==================================================
+11. CUSTOMER-FRIENDLY MIX DETAILS
+==================================================
+
+When the customer opens a recommendation, show:
+
+MIX NAME
+
+Example:
+
+"TROPICAL ICE"
+
+Then show the actual flavour cards:
+
+[IMAGE]
+Lady Killer
+ADALYA
+
+[IMAGE]
+Mint
+AL FAKHER
+
+[IMAGE]
+Mango
+AFZAL
+
+Then:
+
+Taste:
+Fruity • Exotic • Fresh
+
+Strength:
+Medium
+
+Character:
+"Tropical and fruity with a refreshing cool finish."
+
+==================================================
+12. CUSTOMER CUSTOMIZATION
+==================================================
+
+After choosing a recommended mix, show:
+
+"CUSTOMIZE YOUR MIX"
+
+Allow the customer to:
+
+ADD FLAVOUR
+
+REMOVE FLAVOUR
+
+The customer should NOT need to understand percentages.
+
+Instead provide simple options:
+
+MORE
+NORMAL
+LESS
+
+For each ingredient.
+
+Example:
+
+Lady Killer
+[-] LESS   NORMAL   MORE [+]
+
+Mint
+[-] LESS   NORMAL   MORE [+]
+
+Mango
+[-] LESS   NORMAL   MORE [+]
+
+Store this as a customization preference.
+
+==================================================
+13. EXTRA PREFERENCES
+==================================================
+
+Add optional questions:
+
+"Anything you want to avoid?"
+
+Selectable:
+
+Too Sweet
+Too Strong
+Too Minty
+Too Spicy
+Too Cooling
+Too Floral
+
+This should affect recommendations.
+
+Also provide:
+
+"Surprise Me"
+
+which ignores specific flavour choices but uses the customer's broad taste preferences.
+
+==================================================
+14. FINAL CUSTOMER CHOICE
+==================================================
+
+After the customer selects/customizes a mix, show a beautiful summary.
+
+Example:
+
+╔══════════════════════════════╗
+       YOUR CUSTOM HOOKAH
+╠══════════════════════════════╣
+
+TROPICAL ICE
+
+🍓 Fruity
+🌴 Exotic
+❄️ Fresh
+
+Strength:
+MEDIUM
+
+FLAVOURS
+
+Lady Killer — ADALYA
+Mint — AL FAKHER
+Mango — AFZAL
+
+CUSTOM NOTES:
+
+"More mint, medium strength"
+
+╚══════════════════════════════╝
+
+Then show a very prominent button:
+
+[ ORDER CUSTOMISED CHOICE ]
+
+==================================================
+15. WHATSAPP INTEGRATION
+==================================================
+
+THIS IS EXTREMELY IMPORTANT.
+
+The "ORDER CUSTOMISED CHOICE" button must open WhatsApp with the customer's complete selection already written into the message.
+
+WhatsApp destination:
+
++917978443720
+
+Use the WhatsApp link:
+
+https://wa.me/917978443720?text=
+
+IMPORTANT:
+Do not hardcode the customer's selection directly into an unencoded URL.
+
+Use JavaScript encodeURIComponent().
+
+Example:
+
+const message = `
+Hello! My Hookah Order is:
+
+Mix: Tropical Ice
+
+Taste:
+Fruity, Exotic, Fresh
+
+Strength:
+Medium
+
+Flavours:
+- Lady Killer (ADALYA)
+- Mint (AL FAKHER)
+- Mango (AFZAL)
+
+Customization:
+More Mint
+
+Remarks:
+Please prepare this mix.
+`;
+
+const whatsappUrl =
+  "https://wa.me/917978443720?text=" +
+  encodeURIComponent(message);
+
+window.location.href = whatsappUrl;
+
+The final URL should therefore contain the customer's actual selected choices after:
+
+?text=
+
+The WhatsApp button must work as a real clickable link/button.
+
+Use:
+
+ORDER CUSTOMISED CHOICE
+
+as the exact visible button text.
+
+When clicked, WhatsApp should open with the complete order message pre-filled.
+
+Do not require the customer to copy/paste anything.
+
+==================================================
+16. WHATSAPP MESSAGE FORMAT
+==================================================
+
+Use a clean message like:
+
+Hello! My Hookah Order is:
+
+Recommended Mix:
+Tropical Ice
+
+Taste:
+Fruity, Exotic, Fresh
+
+Strength:
+Medium
+
+Flavours:
+1. Lady Killer - ADALYA
+2. Mint - AL FAKHER
+3. Mango - AFZAL
+
+Customization:
+More Mint
+
+Avoid:
+Too Sweet
+
+Remarks:
+Please prepare this mix.
+
+Sent via Hillview Hookah Mixology.
+
+Make sure line breaks are preserved using encodeURIComponent().
+
+==================================================
+17. CUSTOMER REMARKS
+==================================================
+
+Before ordering, allow:
+
+"ANYTHING ELSE?"
+
+Textbox:
+
+"Example: I like a strong flavour but not too much mint."
+
+Include this text in the WhatsApp message.
+
+==================================================
+18. VISUAL FLAVOUR IMAGES
+==================================================
+
+IMPORTANT:
+
+Do NOT create a plain text flavour selector.
+
+Every flavour card must have a visual.
+
+Create an image mapping system:
+
+const flavourImages = {
+  "Blue Berry": "...",
+  "Orange": "...",
+  "Grape": "...",
+  ...
+}
+
+Prefer actual product/flavour images where appropriate and legally available.
+
+If exact product images cannot be reliably sourced, use high-quality ingredient/flavour imagery rather than broken images.
+
+Never allow broken-image icons to appear.
+
+Create graceful fallback images.
+
+All images must:
+- load quickly
+- be cropped consistently
+- have rounded corners
+- work on mobile
+- have alt text
+- use lazy loading where appropriate
+
+==================================================
+19. PHOTO LAYOUT
+==================================================
+
+On mobile, flavour cards should look like:
+
+┌──────────────────────────┐
+│                          │
+│       FLAVOUR PHOTO      │
+│                          │
+├──────────────────────────┤
+│ Lady Killer              │
+│ ADALYA                   │
+│ Fruity • Exotic          │
+│                     +    │
+└──────────────────────────┘
+
+Use 2-column grid on mobile where practical.
+
+On smaller screens, ensure cards remain large enough to tap comfortably.
+
+==================================================
+20. PROGRESS INDICATOR
+==================================================
+
+At the top show:
+
+STEP 1 OF 4
+
+●━━○━━○━━○
+
+Update as the customer progresses.
+
+Allow BACK navigation.
+
+Do not lose previously selected preferences.
+
+==================================================
+21. RESULTS SCREEN
+==================================================
+
+Make the recommendations screen visually impressive.
+
+Header:
+
+"YOUR PERFECT MATCHES"
+
+Subtext:
+
+"Based on what you like, these blends might be perfect for you."
+
+Show 3–5 recommended mixes.
+
+Each card:
+
+Large hero flavour image
+Mix name
+3–4 flavour images
+Taste tags
+Strength
+Short description
+
+Button:
+
+[ CHOOSE ]
+
+==================================================
+22. SURPRISE ME
+==================================================
+
+Add a button:
+
+🎲 SURPRISE ME
+
+It should generate a creative mix based on the customer's selected broad taste and strength.
+
+Show:
+
+"WE'VE GOT SOMETHING SPECIAL FOR YOU"
+
+Then display the generated mix.
+
+==================================================
+23. HOME SCREEN
+==================================================
+
+Home screen should have:
+
+HILLVIEW
+HOOKAH MIXOLOGY
+
+"Find Your Perfect Hookah"
+
+[ FIND MY HOOKAH ]
+
+[ SURPRISE ME ]
+
+Then a visual section:
+
+POPULAR TASTES
+
+🍓 Fruity
+❄️ Fresh
+🌴 Exotic
+🍬 Sweet
+🌿 Minty
+🌶️ Spiced
+
+==================================================
+24. NAVIGATION
+==================================================
+
+Keep customer navigation extremely simple.
+
+Mobile bottom navigation:
+
+🏠 Home
+🔍 Find My Hookah
+❤️ My Choice
+
+Do not overwhelm the customer with staff features.
+
+This is a customer-facing app.
+
+==================================================
+25. MY CHOICE
+==================================================
+
+Create a simple "My Choice" section.
+
+Show the customer's current selected mix.
+
+Allow:
+
+EDIT
+ORDER ON WHATSAPP
+START OVER
+
+Store current choice temporarily in localStorage.
+
+==================================================
+26. RESPONSIVE DESIGN
+==================================================
+
+Must work beautifully on:
+
+iPhone
+Android
+Tablet
+Desktop
+
+Mobile is the priority.
+
+Use:
+- Large touch targets
+- Sticky bottom CTA when appropriate
+- Smooth scrolling
+- No horizontal scrolling
+- Images optimized for mobile
+- Large readable text
+
+==================================================
+27. ANIMATIONS
+==================================================
+
+Use subtle premium animations.
+
+Examples:
+
+Flavour card:
+scale slightly when selected
+
+Selected card:
+show gold outline/checkmark
+
+Recommendation:
+fade/slide in
+
+Button:
+subtle press animation
+
+Do NOT overanimate.
+
+==================================================
+28. ACCESSIBILITY
+==================================================
+
+Use:
+- Proper button elements
+- Alt text
+- Keyboard accessibility
+- Sufficient contrast
+- Clear focus states
+- ARIA labels where needed
+
+==================================================
+29. TECH STACK
+==================================================
+
+Use:
+
+React + Vite
+
+Prefer:
+- React
+- CSS or Tailwind
+- localStorage
+- Browser Web Share API
+- encodeURIComponent()
+
+No backend required.
+
+No authentication.
+
+No API keys.
+
+Keep recommendation logic in a separate module.
+
+Suggested structure:
+
+src/
+  components/
+  data/
+  logic/
+  pages/
+  styles/
+
+Example:
+
+src/data/flavours.js
+
+src/logic/recommendationEngine.js
+
+src/logic/whatsapp.js
+
+==================================================
+30. RECOMMENDATION ENGINE
+==================================================
+
+Create a reusable function:
+
+getRecommendations(preferences)
+
+Input:
+
+{
+  tastes: [],
+  strength: "medium",
+  preferredFlavours: [],
+  avoid: []
+}
+
+Output:
+
+[
+  {
+    name: "",
+    flavours: [],
+    profile: [],
+    strength: "",
+    description: "",
+    matchType: ""
+  }
+]
+
+The algorithm should:
+
+1. Match selected taste tags.
+2. Match preferred flavours.
+3. Respect strength preference.
+4. Avoid flavours/tags the customer rejected.
+5. Favor compatible flavour combinations.
+6. Create 3–5 different recommendations.
+7. Avoid duplicate recommendations.
+8. Provide variety.
+
+Do not expose the algorithm or numerical matching score to customers.
+
+==================================================
+31. SAMPLE RECOMMENDATIONS
+==================================================
+
+Include these as possible combinations but allow the engine to generate others.
+
+TROPICAL ICE:
+Lady Killer
+Mint
+Mango
+
+BLUE EXOTIC:
+Blue Berry
+Lady Killer
+Kiwi
+
+FRESH WAVE:
+Mint
+Sub-Zero
+American Freezer
+
+SWEET TROPICS:
+Mango
+Love 66
+Lady Killer
+
+FRUIT PUNCH:
+Blue Berry
+Orange
+Grape
+Mango
+
+SPICED EXOTIC:
+Pan Raas
+Mango
+Rose
+
+CLASSIC APPLE:
+Double Apple
+Mint
+Rose
+
+Do not force these recommendations if they don't match the customer's preferences.
+
+==================================================
+32. SAFETY / CONTENT
+==================================================
+
+This application is a flavour selection/order interface.
+
+Do not make medical or health claims.
+
+Do not describe hookah as healthy or safe.
+
+Keep descriptions focused on flavour, taste, aroma and experience.
+
+==================================================
+33. FINAL TESTING
+==================================================
+
+Before declaring the project complete:
+
+1. Run the application.
+2. Fix all build errors.
+3. Fix all console errors.
+4. Verify all 20 flavours exist.
+5. Verify all 8 brands exist.
+6. Verify all flavour cards have images/fallback images.
+7. Test multi-select taste preferences.
+8. Test strength selection.
+9. Test preferred flavour selection.
+10. Test avoid preferences.
+11. Test recommendation engine.
+12. Test 3+ recommendations.
+13. Test selecting a recommendation.
+14. Test customization.
+15. Test remarks.
+16. Test WhatsApp button.
+17. Verify WhatsApp message is URL encoded.
+18. Verify selected flavour names appear in WhatsApp message.
+19. Verify strength appears.
+20. Verify customization appears.
+21. Verify remarks appear.
+22. Verify the exact destination number is 917978443720.
+23. Test on mobile screen dimensions.
+24. Test back navigation.
+25. Test START OVER.
+26. Test Surprise Me.
+27. Test empty states.
+28. Test image fallback.
+29. Make sure there are no broken images.
+30. Make sure the app can be used without login.
+
+MOST IMPORTANT:
+
+The customer experience should feel like:
+
+"Tell us what you like → We'll recommend the perfect hookah → Send your choice to our Hookah Expert."
+
+Do not make the customer feel like they are filling out a technical form.
+
+Make it visual, premium, fast and fun.
