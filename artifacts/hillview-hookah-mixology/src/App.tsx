@@ -397,8 +397,7 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
                 <FlavourVisual flavour={flavour} size="lg" />
                 <span className="absolute left-2 top-2 rounded-full bg-background/75 px-2 py-1 font-mono text-[8px] uppercase tracking-wider text-foreground backdrop-blur">{String(index + 1).padStart(2, '0')}</span>
               </div>
-              <div className="px-1 pb-1 pt-3">
-                <p className="truncate text-sm font-bold">{flavour.name}</p>
+              <div className="px-1 pb-1 pt-3">                <p className="truncate text-sm font-bold">{flavour.name}</p>
                 <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{flavour.tags.slice(0, 2).join(' · ')}</p>
               </div>
             </button>
@@ -797,8 +796,7 @@ function RecipeCard({ choice, catalog }: { choice: Choice; catalog: Catalog }) {
         </div>
       </div>
       <div className="mt-4 divide-y divide-border/70 rounded-2xl border border-border/70 bg-background/70">
-        {recipe.map(({ flavour, percentage, amount, customization }) => (
-          <div className="flex items-center gap-3 px-4 py-3" key={flavour.id} data-testid={`recipe-line-${flavour.id}`}>
+        {recipe.map(({ flavour, percentage, amount, customization }) => (          <div className="flex items-center gap-3 px-4 py-3" key={flavour.id} data-testid={`recipe-line-${flavour.id}`}>
             <FlavourVisual flavour={flavour} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{flavour.name}</p>
@@ -1063,7 +1061,8 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
   );
 }
 
-function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {\n  const [location] = useLocation();
+function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {
+  const [location] = useLocation();
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -1197,8 +1196,7 @@ function FlavourSeoPage({ flavour, related }: { flavour: Flavour; related: Flavo
               <Link href={`/flavours/${item.id}`} className="hv-surface flex items-center gap-3 rounded-2xl p-3 hover:border-secondary/50" key={item.id}>
                 <FlavourVisual flavour={item} size="sm" />
                 <div className="min-w-0"><h3 className="hv-display truncate text-xl">{item.name}</h3><p className="text-[10px] text-muted-foreground">{item.brand}</p></div>
-              </Link>
-            ))}
+              </Link>            ))}
           </div>
         </section>
       )}
@@ -1318,7 +1316,10 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalo
       <Route path="/flavours/:id"><FlavourSeoRoute catalog={catalog} /></Route>
       <Route path="/premixes"><PremixesSeoPage catalog={catalog} /></Route>
       <Route path="/premixes/:id"><PremixSeoRoute catalog={catalog} /></Route>
-      <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/flavours"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/premixes"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
+      <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
+      <Route path="/manage/flavours"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
+      <Route path="/manage/premixes"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
+      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
   );
