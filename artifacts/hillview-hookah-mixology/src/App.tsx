@@ -81,8 +81,8 @@ function BrandMark() {
         <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-secondary" />
       </span>
       <span className="leading-none">
-        <span className="block font-mono text-[10px] tracking-[0.18em] text-muted-foreground">HILLVIEW</span>
-        <span className="hv-display block text-lg">Hookah Mixology</span>
+        <span className="block font-mono text-[10px] tracking-[0.18em] text-muted-foreground">MIXOLOGY PRO</span>
+        <span className="hv-display block text-lg">Mixology PRO</span>
       </span>
     </Link>
   );
@@ -389,7 +389,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
         {stage === 'results' && (
           <div className="hv-rise">
             <StepHeader step={4} total={4} onBack={goBack} />
-            <SectionEyebrow>YOUR HILLVIEW SHORTLIST</SectionEyebrow>
+            <SectionEyebrow>YOUR MIXOLOGY PRO SHORTLIST</SectionEyebrow>
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div><h1 className="hv-display text-4xl leading-tight md:text-6xl">These feel like you.</h1><p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground">Three directions, no scores. Trust the one that makes you curious.</p></div>
               <span className="hv-mono text-[10px] text-muted-foreground">{answers.tastes.length ? answers.tastes.slice(0, 3).join(' · ') : 'A little table-side magic'}</span>
@@ -452,10 +452,10 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
                  <div className="mt-5 space-y-3">{selectedFlavours.length ? selectedFlavours.map((flavour) => <div className="flex items-center gap-3" key={flavour.id}><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{customizations[flavour.id] ?? 'Normal'}</p></div><Check size={16} className="text-secondary" /></div>) : <p className="text-sm text-muted-foreground">Your expert will make a thoughtful surprise.</p>}</div>
                 <div className="mt-6 flex flex-wrap gap-2 border-t border-border/70 pt-5">{(answers.tastes.length ? answers.tastes : ['Surprise me']).map((taste) => <span className="rounded-full bg-secondary/15 px-3 py-1.5 text-[10px] font-semibold text-secondary-foreground" key={taste}>{taste}</span>)}</div>
               </div>
-              <div className="rounded-3xl bg-primary p-5 text-primary-foreground md:p-7"><p className="hv-mono text-[10px] text-secondary">A NOTE FOR THE EXPERT</p><label className="mt-5 block text-sm font-semibold" htmlFor="remarks">Anything else?</label><textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} className="mt-3 min-h-36 w-full resize-none rounded-2xl border border-primary-foreground/15 bg-primary-foreground/10 p-4 text-sm leading-6 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-secondary focus:outline-none" placeholder="Tell us about the mood, the table, or anything to leave out." data-testid="textarea-remarks" /><p className="mt-4 text-xs leading-5 text-primary-foreground/55">This note travels with your mix to Hillview Hookah Expert on WhatsApp.</p></div>
+              <div className="rounded-3xl bg-primary p-5 text-primary-foreground md:p-7"><p className="hv-mono text-[10px] text-secondary">A NOTE FOR THE EXPERT</p><label className="mt-5 block text-sm font-semibold" htmlFor="remarks">Anything else?</label><textarea id="remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} className="mt-3 min-h-36 w-full resize-none rounded-2xl border border-primary-foreground/15 bg-primary-foreground/10 p-4 text-sm leading-6 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-secondary focus:outline-none" placeholder="Tell us about the mood, the table, or anything to leave out." data-testid="textarea-remarks" /><p className="mt-4 text-xs leading-5 text-primary-foreground/55">This note travels with your mix to Mixology PRO Expert on WhatsApp.</p></div>
             </div>
             <button className="hv-press mt-6 flex min-h-16 w-full items-center justify-center gap-3 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground shadow-lg shadow-secondary/20" onClick={() => { onSave(finalChoice); openWhatsApp(finalChoice, catalog); }} data-testid="button-order-customised-choice">ORDER CUSTOMISED CHOICE <Send size={18} /></button>
-            <p className="mt-3 text-center text-[10px] text-muted-foreground">We’ll send your flavour choice to Hillview; the preparation recipe stays with the team.</p>
+            <p className="mt-3 text-center text-[10px] text-muted-foreground">We’ll send your flavour choice to Mixology PRO; the preparation recipe stays with the team.</p>
           </div>
         )}
       </div>
@@ -528,14 +528,14 @@ function ChoicePage({ choice, onEdit, onReset, catalog }: { choice: Choice | nul
   return (
     <main className="hv-shell hv-page-in">
       <div className="mx-auto max-w-4xl">
-        <SectionEyebrow>YOUR HILLVIEW NOTE</SectionEyebrow>
+        <SectionEyebrow>YOUR MIXOLOGY PRO NOTE</SectionEyebrow>
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end"><div><h1 className="hv-display text-5xl md:text-6xl">My Choice</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">{choice ? 'Your last cloud is saved here on this device.' : 'Nothing saved yet. Let’s find your first cloud.'}</p></div>{choice && <span className="hv-mono text-[10px] text-secondary">SAVED LOCALLY</span>}</div>
         {!choice ? (
           <div className="hv-surface mt-10 flex flex-col items-center rounded-[2rem] px-6 py-16 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-secondary/20 text-secondary-foreground"><Sparkles size={25} /></span><h2 className="hv-display mt-6 text-3xl">A blank page, for now.</h2><p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Answer a few easy questions and we’ll keep your finished choice close by.</p><Link href="/find" className="mt-7 flex min-h-13 items-center gap-2 rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground" data-testid="link-empty-find">Find my hookah <ArrowRight size={16} /></Link></div>
         ) : (
           <>
             <div className="mt-9 grid gap-4 md:grid-cols-[1.05fr_.95fr]">
-              <div className="rounded-[2rem] bg-primary p-6 text-primary-foreground md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-secondary">THE MIX</span><Flame size={19} className="text-secondary" /></div><h2 className="hv-display mt-6 text-3xl">{choice.mixName || 'Mixology PRO Custom Mix'}</h2><div className="mt-6 space-y-4">{selected.map((flavour) => <div className="flex items-center gap-3" key={flavour.id} data-testid={`text-saved-flavour-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><div><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-primary-foreground/55">{choice.customizations[flavour.id] ?? 'Normal'}</p></div></div>)}</div><div className="mt-8 border-t border-primary-foreground/15 pt-5"><p className="hv-mono text-[9px] text-primary-foreground/50">MOOD</p><p className="mt-2 text-sm">{choice.tastes.length ? choice.tastes.join(' · ') : 'A Hillview surprise'}</p></div></div>
+              <div className="rounded-[2rem] bg-primary p-6 text-primary-foreground md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-secondary">THE MIX</span><Flame size={19} className="text-secondary" /></div><h2 className="hv-display mt-6 text-3xl">{choice.mixName || 'Mixology PRO Custom Mix'}</h2><div className="mt-6 space-y-4">{selected.map((flavour) => <div className="flex items-center gap-3" key={flavour.id} data-testid={`text-saved-flavour-${flavour.id}`}><FlavourVisual flavour={flavour} size="sm" /><div><p className="text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-primary-foreground/55">{choice.customizations[flavour.id] ?? 'Normal'}</p></div></div>)}</div><div className="mt-8 border-t border-primary-foreground/15 pt-5"><p className="hv-mono text-[9px] text-primary-foreground/50">MOOD</p><p className="mt-2 text-sm">{choice.tastes.length ? choice.tastes.join(' · ') : 'A Mixology PRO surprise'}</p></div></div>
               <div className="hv-surface rounded-[2rem] p-6 md:p-8"><div className="flex items-center justify-between"><span className="hv-mono text-[10px] text-accent">TABLE NOTES</span><span className="rounded-full bg-muted px-3 py-1 text-[10px] font-semibold">{choice.strength}</span></div><p className="mt-8 text-sm leading-7">{choice.remarks || 'No extra notes — the blend can speak for itself.'}</p><div className="mt-8 border-t border-border/70 pt-5"><p className="text-xs font-bold">Avoiding</p><p className="mt-2 text-xs text-muted-foreground">{choice.avoid.length ? choice.avoid.join(' · ') : 'Nothing noted'}</p></div></div>
             </div>
              <div className="mt-6 flex flex-col gap-3 sm:flex-row"><button className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-card px-5 text-sm font-bold hover:bg-muted" onClick={onEdit} data-testid="button-edit-choice"><Edit3 size={16} /> EDIT</button><button className="flex min-h-13 flex-[1.5] items-center justify-center gap-2 rounded-2xl bg-secondary px-5 text-sm font-bold text-secondary-foreground shadow-lg shadow-secondary/15" onClick={() => openWhatsApp(choice, catalog)} data-testid="button-order-whatsapp"><Send size={16} /> ORDER ON WHATSAPP</button><button className="flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive" onClick={onReset} data-testid="button-start-over"><RotateCcw size={16} /> START OVER</button></div>
@@ -579,7 +579,7 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
     const nextFlavour: Flavour = {
       id,
       name,
-      brand: flavourForm.brand.trim() || 'Hillview Stock',
+      brand: flavourForm.brand.trim() || 'Mixology PRO Stock',
       tags: flavourForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
       strength: flavourForm.strength,
       character: flavourForm.character.trim(),
