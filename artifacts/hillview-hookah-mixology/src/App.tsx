@@ -1094,7 +1094,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
 function SeoMeta({ title, description, path }: { title: string; description: string; path: string }) {
   useEffect(() => {
     document.title = title;
-    const canonicalUrl = `https://mixology.monster\${path}`;
+    const canonicalUrl = `https://mixology.monster${path}`;
     const setMeta = (selector: string, attribute: 'name' | 'property', content: string) => {
       let element = document.head.querySelector<HTMLMetaElement>(selector);
       if (!element) {
