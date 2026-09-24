@@ -1032,6 +1032,23 @@ function PosPage() {
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [emailError, setEmailError] = useState('');
   const [bill, setBill] = useState<{ id: string; amount: number; remark: string; createdAt: string; status: 'PENDING' | 'PAID' } | null>(null);
+  const [billingHistory, setBillingHistory] = useState<Array<{ id: string; amount: number; remark: string; createdAt: string; status: 'PAID' }>>(() => {
+    try {
+      const saved = localStorage.getItem('mixology-billing-history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveBillingHistory = (paidBill: { id: string; amount: number; remark: string; createdAt: string; status: 'PENDING' | 'PAID' }) => {
+    const completed = { ...paidBill, status: 'PAID' as const };
+    setBillingHistory((current) => {
+      const next = [completed, ...current.filter((item) => item.id !== completed.id)].slice(0, 100);
+      localStorage.setItem('mixology-billing-history', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const createBill = () => {
     const value = Number(amount);
@@ -1068,9 +1085,21 @@ function PosPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]"><section className="hv-surface rounded-[2rem] p-5 text-center md:p-8"><SectionEyebrow>SCAN TO PAY</SectionEyebrow><div className="mx-auto flex max-w-sm flex-col items-center"><div className="rounded-[1.75rem] bg-white p-4 shadow-xl"><img src={qrUrl} alt={`UPI payment QR for ₹${bill.amount.toFixed(2)}`} className="h-72 w-72 object-contain" /></div><p className="mt-5 text-4xl font-black">₹{bill.amount.toFixed(2)}</p><p className="mt-2 text-xs text-muted-foreground">{bill.remark || 'Mixology POS payment'}</p><p className="mt-4 rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{bill.id}</p></div></section>
         <section className="hv-surface rounded-[2rem] p-5 md:p-8"><div className={`rounded-2xl border p-5 ${bill.status === 'PAID' ? 'border-secondary/40 bg-secondary/10' : 'border-border bg-muted/30'}`}><div className="flex items-center gap-3">{bill.status === 'PAID' ? <CheckCircle2 className="text-secondary" size={24} /> : <QrCode className="text-secondary" size={24} />}<div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{bill.status === 'PAID' ? 'Payment confirmed' : 'Awaiting payment'}</p><p className="font-semibold">{bill.status === 'PAID' ? 'Bill marked PAID' : 'Customer can scan the QR now'}</p></div></div></div>
           <div className="mt-5 space-y-3 text-sm"><div className="flex justify-between gap-4"><span className="text-muted-foreground">Amount</span><strong>₹{bill.amount.toFixed(2)}</strong></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">UPI</span><strong className="font-mono text-xs">{PAYEE_UPI}</strong></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">Reference</span><strong className="font-mono text-xs">{bill.id}</strong></div>{bill.remark && <div className="flex justify-between gap-4"><span className="text-muted-foreground">Remark</span><strong className="text-right">{bill.remark}</strong></div>}</div>
-          {bill.status === 'PENDING' ? <div className="mt-7 grid gap-3"><button onClick={() => setBill({ ...bill, status: 'PAID' })} className="min-h-13 rounded-2xl bg-secondary px-5 text-sm font-black text-secondary-foreground"><Check size={17} className="mr-2 inline" /> Payment Received</button><p className="text-center text-[11px] leading-5 text-muted-foreground">Only tap this after checking that the customer actually paid. Manual confirmation is enabled for now.</p></div> :
+          {bill.status === 'PENDING' ? <div className="mt-7 grid gap-3"><button onClick={() => { setBill({ ...bill, status: 'PAID' }); saveBillingHistory(bill); }} className="min-h-13 rounded-2xl bg-secondary px-5 text-sm font-black text-secondary-foreground"><Check size={17} className="mr-2 inline" /> Payment Received</button><p className="text-center text-[11px] leading-5 text-muted-foreground">Only tap this after checking that the customer actually paid. Manual confirmation is enabled for now.</p></div> :
           <div className="mt-7 grid gap-3 sm:grid-cols-2"><button onClick={() => window.print()} className="min-h-12 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground"><Printer size={16} className="mr-2 inline" /> Print Bill</button><button onClick={resetBill} className="min-h-12 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted"><RefreshCw size={16} className="mr-2 inline" /> New Bill</button></div>}
         </section>
+        {billingHistory.length > 0 && <section className="hv-surface rounded-[2rem] p-5 md:p-7 lg:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <div><SectionEyebrow>BILLING HISTORY</SectionEyebrow><h2 className="hv-display mt-1 text-3xl">Recent Bills</h2><p className="mt-1 text-xs text-muted-foreground">Saved on this POS device.</p></div>
+            <button onClick={() => { if (confirm('Clear all saved billing history on this device?')) { localStorage.removeItem('mixology-billing-history'); setBillingHistory([]); } }} className="rounded-xl border border-border px-3 py-2 text-[11px] font-bold hover:bg-muted">Clear History</button>
+          </div>
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-xs">
+              <thead><tr className="border-b border-border text-muted-foreground"><th className="px-3 py-3">Bill</th><th className="px-3 py-3">Date</th><th className="px-3 py-3">Remark</th><th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Status</th></tr></thead>
+              <tbody>{billingHistory.map((item) => <tr key={item.id} className="border-b border-border/60 last:border-0"><td className="px-3 py-3 font-mono font-bold">{item.id}</td><td className="px-3 py-3">{new Date(item.createdAt).toLocaleString('en-IN')}</td><td className="px-3 py-3">{item.remark || '—'}</td><td className="px-3 py-3 text-right font-bold">₹{item.amount.toFixed(2)}</td><td className="px-3 py-3 text-right"><span className="rounded-full bg-secondary/15 px-2 py-1 font-bold text-secondary">PAID</span></td></tr>)}</tbody>
+            </table>
+          </div>
+        </section>}
         {bill.status === 'PAID' && <section className="hv-surface pos-receipt rounded-[2rem] p-6 lg:col-span-2" data-testid="pos-acknowledgement">
           <div className="text-center"><p className="text-[11px] font-bold tracking-[0.28em]">MIXOLOGY</p><h2 className="mt-1 text-2xl font-black">PAYMENT RECEIPT</h2><p className="text-[11px] text-muted-foreground">POS BILL</p></div>
           <div className="my-5 border-y border-dashed border-foreground/40 py-4 text-xs"><div className="flex justify-between gap-4"><span>Bill No.</span><strong>{bill.id}</strong></div><div className="mt-2 flex justify-between gap-4"><span>Date</span><strong>{new Date(bill.createdAt).toLocaleString('en-IN')}</strong></div><div className="mt-2 flex justify-between gap-4"><span>Payment</span><strong>UPI</strong></div><div className="mt-2 flex justify-between gap-4"><span>UPI ID</span><strong className="break-all">{PAYEE_UPI}</strong></div>{bill.remark && <div className="mt-2 flex justify-between gap-4"><span>Remark</span><strong className="text-right">{bill.remark}</strong></div>}</div>
