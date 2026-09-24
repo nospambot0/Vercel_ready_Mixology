@@ -1,7 +1,7 @@
 import { flavours as defaultFlavours, premixes as defaultPremixes } from '../data/flavours';
 import type { Catalog } from '../types';
 
-export const CATALOG_STORAGE_KEY = 'hillview-hookah-catalog';
+export const CATALOG_STORAGE_KEY = 'mixology-pro-catalog';
 
 function isValidFlavour(value: unknown) {
   if (!value || typeof value !== 'object') return false;
