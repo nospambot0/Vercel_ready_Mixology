@@ -199,19 +199,9 @@ function HomeIntroAnimation() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      if (localStorage.getItem('mixology-pro-home-intro-seen') === 'true') return;
-      setVisible(true);
-      const timer = window.setTimeout(() => {
-        localStorage.setItem('mixology-pro-home-intro-seen', 'true');
-        setVisible(false);
-      }, 4200);
-      return () => window.clearTimeout(timer);
-    } catch {
-      setVisible(true);
-      const timer = window.setTimeout(() => setVisible(false), 4200);
-      return () => window.clearTimeout(timer);
-    }
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 4200);
+    return () => window.clearTimeout(timer);
   }, []);
 
   if (!visible) return null;
