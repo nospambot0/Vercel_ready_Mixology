@@ -19,6 +19,7 @@ export type Choice = {
   favouriteIds: string[];
   avoid: string[];
   customizations: Record<string, CustomLevel>;
+  percentages?: Record<string, number>;
   remarks: string;
   chosenAt: string;
 };
