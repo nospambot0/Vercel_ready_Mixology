@@ -6,6 +6,7 @@ const SESSION_VALUE = 'authenticated';
 const SESSION_MAX_AGE = 8 * 60 * 60;
 const OTP_MAX_AGE = 10 * 60;
 const OTP_RESEND_COOLDOWN = 60;
+const STAFF_OTP_EMAIL = 'r.rakeshdas401@gmail.com';
 const PASSWORD_SESSION_VALUE = 'authenticated';
 
 type RequestLike = {
@@ -190,12 +191,7 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
   }
 
   if (action === 'send') {
-    const email = normalizeEmail(body.email);
-    if (!isAllowedStaffEmail(email)) {
-      sendJson(res, 403, { message: 'This email is not authorized for staff access.' });
-      return;
-    }
-
+    const email = STAFF_OTP_EMAIL;
     const existing = readOtpToken(cookies[OTP_COOKIE]);
     if (existing && Date.now() - existing.issuedAt < OTP_RESEND_COOLDOWN * 1000 && existing.email === email) {
       sendJson(res, 429, { message: 'Please wait a minute before requesting another code.' });
@@ -215,7 +211,7 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
     return;
   }
 
-  const email = normalizeEmail(body.email);
+  const email = STAFF_OTP_EMAIL;
   const code = typeof body.code === 'string' ? body.code.trim() : '';
   const otp = readOtpToken(cookies[OTP_COOKIE]);
 
