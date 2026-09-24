@@ -1032,22 +1032,30 @@ function PosPage() {
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [emailError, setEmailError] = useState('');
   const [bill, setBill] = useState<{ id: string; amount: number; remark: string; createdAt: string; status: 'PENDING' | 'PAID' } | null>(null);
-  const [billingHistory, setBillingHistory] = useState<Array<{ id: string; amount: number; remark: string; createdAt: string; status: 'PAID' }>>(() => {
-    try {
-      const saved = localStorage.getItem('mixology-billing-history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [billingHistory, setBillingHistory] = useState<Array<{ id: string; amount: number; remark: string; createdAt: string; status: 'PAID' }>>([]);
 
-  const saveBillingHistory = (paidBill: { id: string; amount: number; remark: string; createdAt: string; status: 'PENDING' | 'PAID' }) => {
+  useEffect(() => {
+    fetch('/api/pos/history', { credentials: 'include' })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Could not load billing history.')))
+      .then((data) => setBillingHistory(Array.isArray(data.bills) ? data.bills : []))
+      .catch(() => setBillingHistory([]));
+  }, []);
+
+  const saveBillingHistory = async (paidBill: { id: string; amount: number; remark: string; createdAt: string; status: 'PENDING' | 'PAID' }) => {
     const completed = { ...paidBill, status: 'PAID' as const };
-    setBillingHistory((current) => {
-      const next = [completed, ...current.filter((item) => item.id !== completed.id)].slice(0, 100);
-      localStorage.setItem('mixology-billing-history', JSON.stringify(next));
-      return next;
-    });
+    setBillingHistory((current) => [completed, ...current.filter((item) => item.id !== completed.id)].slice(0, 100));
+    try {
+      const response = await fetch('/api/pos/history', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bill: completed }),
+      });
+      if (!response.ok) throw new Error('Could not save bill.');
+    } catch {
+      setBillingHistory((current) => current.filter((item) => item.id !== completed.id));
+      alert('Could not save this bill to cloud billing history.');
+    }
   };
 
   const createBill = () => {
@@ -1085,13 +1093,13 @@ function PosPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]"><section className="hv-surface rounded-[2rem] p-5 text-center md:p-8"><SectionEyebrow>SCAN TO PAY</SectionEyebrow><div className="mx-auto flex max-w-sm flex-col items-center"><div className="rounded-[1.75rem] bg-white p-4 shadow-xl"><img src={qrUrl} alt={`UPI payment QR for ₹${bill.amount.toFixed(2)}`} className="h-72 w-72 object-contain" /></div><p className="mt-5 text-4xl font-black">₹{bill.amount.toFixed(2)}</p><p className="mt-2 text-xs text-muted-foreground">{bill.remark || 'Mixology POS payment'}</p><p className="mt-4 rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{bill.id}</p></div></section>
         <section className="hv-surface rounded-[2rem] p-5 md:p-8"><div className={`rounded-2xl border p-5 ${bill.status === 'PAID' ? 'border-secondary/40 bg-secondary/10' : 'border-border bg-muted/30'}`}><div className="flex items-center gap-3">{bill.status === 'PAID' ? <CheckCircle2 className="text-secondary" size={24} /> : <QrCode className="text-secondary" size={24} />}<div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{bill.status === 'PAID' ? 'Payment confirmed' : 'Awaiting payment'}</p><p className="font-semibold">{bill.status === 'PAID' ? 'Bill marked PAID' : 'Customer can scan the QR now'}</p></div></div></div>
           <div className="mt-5 space-y-3 text-sm"><div className="flex justify-between gap-4"><span className="text-muted-foreground">Amount</span><strong>₹{bill.amount.toFixed(2)}</strong></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">UPI</span><strong className="font-mono text-xs">{PAYEE_UPI}</strong></div><div className="flex justify-between gap-4"><span className="text-muted-foreground">Reference</span><strong className="font-mono text-xs">{bill.id}</strong></div>{bill.remark && <div className="flex justify-between gap-4"><span className="text-muted-foreground">Remark</span><strong className="text-right">{bill.remark}</strong></div>}</div>
-          {bill.status === 'PENDING' ? <div className="mt-7 grid gap-3"><button onClick={() => { setBill({ ...bill, status: 'PAID' }); saveBillingHistory(bill); }} className="min-h-13 rounded-2xl bg-secondary px-5 text-sm font-black text-secondary-foreground"><Check size={17} className="mr-2 inline" /> Payment Received</button><p className="text-center text-[11px] leading-5 text-muted-foreground">Only tap this after checking that the customer actually paid. Manual confirmation is enabled for now.</p></div> :
+          {bill.status === 'PENDING' ? <div className="mt-7 grid gap-3"><button onClick={() => { setBill({ ...bill, status: 'PAID' }); void saveBillingHistory(bill); }} className="min-h-13 rounded-2xl bg-secondary px-5 text-sm font-black text-secondary-foreground"><Check size={17} className="mr-2 inline" /> Payment Received</button><p className="text-center text-[11px] leading-5 text-muted-foreground">Only tap this after checking that the customer actually paid. Manual confirmation is enabled for now.</p></div> :
           <div className="mt-7 grid gap-3 sm:grid-cols-2"><button onClick={() => window.print()} className="min-h-12 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground"><Printer size={16} className="mr-2 inline" /> Print Bill</button><button onClick={resetBill} className="min-h-12 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted"><RefreshCw size={16} className="mr-2 inline" /> New Bill</button></div>}
         </section>
         {billingHistory.length > 0 && <section className="hv-surface rounded-[2rem] p-5 md:p-7 lg:col-span-2">
           <div className="flex items-center justify-between gap-3">
-            <div><SectionEyebrow>BILLING HISTORY</SectionEyebrow><h2 className="hv-display mt-1 text-3xl">Recent Bills</h2><p className="mt-1 text-xs text-muted-foreground">Saved on this POS device.</p></div>
-            <button onClick={() => { if (confirm('Clear all saved billing history on this device?')) { localStorage.removeItem('mixology-billing-history'); setBillingHistory([]); } }} className="rounded-xl border border-border px-3 py-2 text-[11px] font-bold hover:bg-muted">Clear History</button>
+            <div><SectionEyebrow>BILLING HISTORY</SectionEyebrow><h2 className="hv-display mt-1 text-3xl">Recent Bills</h2><p className="mt-1 text-xs text-muted-foreground">Saved securely in cloud billing history and shared across staff devices.</p></div>
+            <button onClick={async () => { if (confirm('Clear all cloud billing history?')) { const response = await fetch('/api/pos/history', { method: 'DELETE', credentials: 'include' }); if (response.ok) setBillingHistory([]); else alert('Could not clear cloud billing history.'); } }} className="rounded-xl border border-border px-3 py-2 text-[11px] font-bold hover:bg-muted">Clear History</button>
           </div>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-xs">
