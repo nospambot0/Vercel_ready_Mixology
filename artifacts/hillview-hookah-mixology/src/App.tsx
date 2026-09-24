@@ -1200,7 +1200,9 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
 function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {
   const [location] = useLocation();
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
+  const [method, setMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'email' | 'code'>('email');
+  const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState('');
@@ -1210,11 +1212,39 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
   useEffect(() => {
     let active = true;
     fetch('/api/manage/session', { credentials: 'include' })
-      .then((response) => response.ok ? response.json() as Promise<{ authenticated?: boolean }> : Promise.reject(new Error('Session check failed')))
-      .then((data) => { if (active) setStatus(data.authenticated ? 'unlocked' : 'locked'); })
+      .then(async (response) => {
+        if (response.status < 200 || response.status >= 300) throw new Error('Session check failed');
+        const data = await response.json() as { authenticated?: boolean };
+        if (active) setStatus(data.authenticated ? 'unlocked' : 'locked');
+      })
       .catch(() => { if (active) { setStatus('locked'); setError('The staff login service is unavailable. Please try again.'); } });
     return () => { active = false; };
   }, []);
+
+  const loginWithPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setSending(true);
+    try {
+      const response = await fetch('/api/manage/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'password', password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status < 200 || response.status >= 300) {
+        setError(data.message || 'The password is incorrect.');
+        return;
+      }
+      setPassword('');
+      setStatus('unlocked');
+    } catch {
+      setError('The staff login service is unavailable. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const sendCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1228,7 +1258,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
         body: JSON.stringify({ action: 'send', email }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         setError(data.message || 'Could not send the verification code.');
         return;
       }
@@ -1254,7 +1284,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
         body: JSON.stringify({ action: 'verify', email, code }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         setCode('');
         setError(data.message || 'That verification code is invalid or expired.');
         return;
@@ -1273,6 +1303,8 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     setStatus('locked');
     setStep('email');
     setCode('');
+    setPassword('');
+    setError('');
   };
 
   if (status === 'checking') {
@@ -1287,33 +1319,51 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
 
   return (
     <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28">
-      {step === 'email' ? (
-        <form className="hv-surface w-full max-w-md rounded-[2rem] p-6 md:p-8" onSubmit={sendCode} data-testid="form-manage-login">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
-          <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
-          <h1 className="hv-display text-4xl">Staff login</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">Enter your authorized employee email. We’ll send a one-time verification code.</p>
-          <label className="mt-7 block text-xs font-bold" htmlFor="manage-email">Employee email<input id="manage-email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={manageInputClass} placeholder="name@mixology.monster" data-testid="input-manage-email" /></label>
-          {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
-          <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending} data-testid="button-manage-send-code">{sending ? 'Sending code…' : 'Send verification code'}</button>
-          <p className="mt-4 text-center text-[10px] leading-5 text-muted-foreground">Verification emails are sent from staff@mixology.monster.</p>
-        </form>
-      ) : (
-        <form className="hv-surface w-full max-w-md rounded-[2rem] p-6 md:p-8" onSubmit={verifyCode} data-testid="form-manage-verify">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><CheckCircle2 size={22} /></div>
-          <SectionEyebrow>CHECK YOUR EMAIL</SectionEyebrow>
-          <h1 className="hv-display text-4xl">Enter your code</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">We sent a 6-digit code to <strong className="text-foreground">{sentTo || email}</strong>. It expires in 10 minutes.</p>
-          <label className="mt-7 block text-xs font-bold" htmlFor="manage-code">Verification code<input id="manage-code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={manageInputClass + ' text-center text-xl tracking-[0.45em] font-bold'} placeholder="123456" data-testid="input-manage-code" /></label>
-          {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
-          <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || code.length !== 6} data-testid="button-manage-verify">{sending ? 'Verifying…' : 'Verify & unlock'}</button>
-          <button type="button" className="mt-3 min-h-10 w-full rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted" onClick={() => { setStep('email'); setCode(''); setError(''); }}>Use a different email</button>
-        </form>
-      )}
+      <div className="w-full max-w-md">
+        <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
+          <button type="button" onClick={() => { setMethod('password'); setError(''); }} className={`min-h-10 rounded-xl text-xs font-bold ${method === 'password' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`} data-testid="button-manage-password-tab">Password</button>
+          <button type="button" onClick={() => { setMethod('otp'); setError(''); }} className={`min-h-10 rounded-xl text-xs font-bold ${method === 'otp' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`} data-testid="button-manage-otp-tab">Email OTP</button>
+        </div>
+
+        {method === 'password' ? (
+          <form className="hv-surface rounded-[2rem] p-6 md:p-8" onSubmit={loginWithPassword} data-testid="form-manage-password-login">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
+            <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
+            <h1 className="hv-display text-4xl">Staff login</h1>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Use the staff password or switch to email OTP.</p>
+            <label className="mt-7 block text-xs font-bold" htmlFor="manage-password">Staff password<input id="manage-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className={manageInputClass} placeholder="Enter password" data-testid="input-manage-password" /></label>
+            {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+            <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || !password} data-testid="button-manage-password-login">{sending ? 'Unlocking…' : 'Unlock with password'}</button>
+          </form>
+        ) : (
+          step === 'email' ? (
+            <form className="hv-surface rounded-[2rem] p-6 md:p-8" onSubmit={sendCode} data-testid="form-manage-login">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
+              <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
+              <h1 className="hv-display text-4xl">Email OTP login</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">Enter your authorized employee email. We’ll send a one-time verification code.</p>
+              <label className="mt-7 block text-xs font-bold" htmlFor="manage-email">Employee email<input id="manage-email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={manageInputClass} placeholder="name@mixology.monster" data-testid="input-manage-email" /></label>
+              {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+              <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || !email} data-testid="button-manage-send-code">{sending ? 'Sending code…' : 'Send verification code'}</button>
+              <p className="mt-4 text-center text-[10px] leading-5 text-muted-foreground">Verification emails are sent from staff@mixology.monster.</p>
+            </form>
+          ) : (
+            <form className="hv-surface rounded-[2rem] p-6 md:p-8" onSubmit={verifyCode} data-testid="form-manage-verify">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><CheckCircle2 size={22} /></div>
+              <SectionEyebrow>CHECK YOUR EMAIL</SectionEyebrow>
+              <h1 className="hv-display text-4xl">Enter your code</h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">We sent a 6-digit code to <strong className="text-foreground">{sentTo || email}</strong>. It expires in 10 minutes.</p>
+              <label className="mt-7 block text-xs font-bold" htmlFor="manage-code">Verification code<input id="manage-code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={manageInputClass + ' text-center text-xl tracking-[0.45em] font-bold'} placeholder="123456" data-testid="input-manage-code" /></label>
+              {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+              <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || code.length !== 6} data-testid="button-manage-verify">{sending ? 'Verifying…' : 'Verify & unlock'}</button>
+              <button type="button" className="mt-3 min-h-10 w-full rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted" onClick={() => { setStep('email'); setCode(''); setError(''); }}>Use a different email</button>
+            </form>
+          )
+        )}
+      </div>
     </main>
   );
 }
-
 function SeoMeta({ title, description, path }: { title: string; description: string; path: string }) {
   useEffect(() => {
     document.title = title;
