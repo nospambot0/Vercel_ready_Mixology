@@ -6,6 +6,7 @@ const SESSION_VALUE = 'authenticated';
 const SESSION_MAX_AGE = 8 * 60 * 60;
 const OTP_MAX_AGE = 10 * 60;
 const OTP_RESEND_COOLDOWN = 60;
+const PASSWORD_SESSION_VALUE = 'authenticated';
 
 type RequestLike = {
   body?: unknown;
@@ -32,8 +33,8 @@ function sign(value: string): string {
     .digest('base64url');
 }
 
-function signedSessionValue(): string {
-  return `s:${SESSION_VALUE}.${sign(SESSION_VALUE)}`;
+function signedSessionValue(value = SESSION_VALUE): string {
+  return `s:${value}.${sign(value)}`;
 }
 
 function parseCookies(header: string | string[] | undefined): Record<string, string> {
@@ -59,7 +60,7 @@ export function isValidSession(value: string | undefined): boolean {
   if (!value?.startsWith('s:')) return false;
   const unsignedValue = value.slice(2).split('.')[0];
   const signature = value.slice(2).slice(unsignedValue.length + 1);
-  if (unsignedValue !== SESSION_VALUE || !signature) return false;
+  if ((unsignedValue !== SESSION_VALUE && unsignedValue !== PASSWORD_SESSION_VALUE) || !signature) return false;
   return safeEqual(signature, sign(unsignedValue));
 }
 
@@ -143,6 +144,11 @@ function maskEmail(email: string): string {
   return `${visible}${'*'.repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
+function isValidPassword(password: string): boolean {
+  const configured = process.env.MANAGE_PASSWORD;
+  return Boolean(configured && password && safeEqual(password, configured));
+}
+
 async function sendOtpEmail(email: string, code: string): Promise<void> {
   const apiKey = getEnv('RESEND_API_KEY');
   const from = 'staff@mixology.monster';
@@ -157,9 +163,8 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
       html: `<!doctype html><html><body style="margin:0;background:#f4f4f2;font-family:Arial,sans-serif;color:#171717"><div style="max-width:520px;margin:30px auto;background:#fff;padding:32px;border:1px solid #ddd;border-radius:18px"><div style="font-size:11px;letter-spacing:3px;color:#777">MIXOLOGY PRO / STAFF ACCESS</div><h1 style="margin:10px 0 6px;font-size:28px">Your login code</h1><p style="color:#666;font-size:14px;line-height:1.6">Use this one-time verification code to access the staff area.</p><div style="margin:26px 0;text-align:center;background:#f4f4f2;border-radius:14px;padding:20px;font-size:34px;font-weight:800;letter-spacing:8px">${code}</div><p style="color:#777;font-size:12px">This code expires in 10 minutes and can only be used once.</p></div></body></html>`,
     }),
   });
-  if (!response.ok) {
-    const result = await response.json().catch(() => ({}));
-    throw new Error(result?.message || 'The email provider rejected the verification email.');
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error('The email provider rejected the verification email.');
   }
 }
 
@@ -170,8 +175,19 @@ export function handleSession(req: RequestLike, res: ResponseLike): void {
 
 export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<void> {
   const body = readBody(req.body);
-  const action = body.action === 'verify' ? 'verify' : 'send';
+  const action = body.action === 'verify' || body.action === 'password' ? body.action : 'send';
   const cookies = parseCookies(req.headers.cookie);
+
+  if (action === 'password') {
+    const password = typeof body.password === 'string' ? body.password : '';
+    if (!isValidPassword(password)) {
+      sendJson(res, 401, { message: 'The password is incorrect.' });
+      return;
+    }
+    setCookie(res, SESSION_COOKIE, signedSessionValue(), SESSION_MAX_AGE);
+    sendJson(res, 200, { authenticated: true, method: 'password' });
+    return;
+  }
 
   if (action === 'send') {
     const email = normalizeEmail(body.email);
