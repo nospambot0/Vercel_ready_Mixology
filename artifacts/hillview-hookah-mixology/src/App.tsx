@@ -1063,7 +1063,7 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
   );
 }
 
-function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {\n  const [location, setLocation] = useLocation();
+function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {\n  const [location] = useLocation();
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
