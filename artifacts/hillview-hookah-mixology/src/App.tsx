@@ -1200,8 +1200,12 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
 function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {
   const [location] = useLocation();
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
-  const [password, setPassword] = useState('');
+  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [sentTo, setSentTo] = useState('');
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -1212,30 +1216,63 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     return () => { active = false; };
   }, []);
 
-  const login = async (event: React.FormEvent<HTMLFormElement>) => {
+  const sendCode = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setSending(true);
     try {
       const response = await fetch('/api/manage/login', {
-        method: 'POST',        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ action: 'send', email }),
       });
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setPassword('');
-        setError(response.status === 401 ? 'That password was not accepted.' : 'The staff login service is unavailable.');
+        setError(data.message || 'Could not send the verification code.');
         return;
       }
-      setPassword('');
+      setSentTo(data.email || email);
+      setStep('code');
+      setCode('');
+    } catch {
+      setError('The staff login service is unavailable. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const verifyCode = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setSending(true);
+    try {
+      const response = await fetch('/api/manage/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'verify', email, code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setCode('');
+        setError(data.message || 'That verification code is invalid or expired.');
+        return;
+      }
+      setCode('');
       setStatus('unlocked');
     } catch {
       setError('The staff login service is unavailable. Please try again.');
+    } finally {
+      setSending(false);
     }
   };
 
   const logout = async () => {
     await fetch('/api/manage/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
     setStatus('locked');
+    setStep('email');
+    setCode('');
   };
 
   if (status === 'checking') {
@@ -1246,23 +1283,36 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
     if (location === '/manage/pos') return <PosPage />;
     return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
-}
+  }
 
   return (
     <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28">
-      <form className="hv-surface w-full max-w-md rounded-[2rem] p-6 md:p-8" onSubmit={login} data-testid="form-manage-login">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
-        <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
-        <h1 className="hv-display text-4xl">Manage stock</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">Enter the staff password to manage flavour profiles and premix recipes.</p>
-        <label className="mt-7 block text-xs font-bold" htmlFor="manage-password">Password<input id="manage-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className={manageInputClass} data-testid="input-manage-password" /></label>
-        {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
-        <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground" type="submit" data-testid="button-manage-login">Unlock management</button>
-      </form>
+      {step === 'email' ? (
+        <form className="hv-surface w-full max-w-md rounded-[2rem] p-6 md:p-8" onSubmit={sendCode} data-testid="form-manage-login">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
+          <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
+          <h1 className="hv-display text-4xl">Staff login</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">Enter your authorized employee email. We’ll send a one-time verification code.</p>
+          <label className="mt-7 block text-xs font-bold" htmlFor="manage-email">Employee email<input id="manage-email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={manageInputClass} placeholder="name@mixology.monster" data-testid="input-manage-email" /></label>
+          {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+          <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending} data-testid="button-manage-send-code">{sending ? 'Sending code…' : 'Send verification code'}</button>
+          <p className="mt-4 text-center text-[10px] leading-5 text-muted-foreground">Verification emails are sent from staff@mixology.monster.</p>
+        </form>
+      ) : (
+        <form className="hv-surface w-full max-w-md rounded-[2rem] p-6 md:p-8" onSubmit={verifyCode} data-testid="form-manage-verify">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><CheckCircle2 size={22} /></div>
+          <SectionEyebrow>CHECK YOUR EMAIL</SectionEyebrow>
+          <h1 className="hv-display text-4xl">Enter your code</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">We sent a 6-digit code to <strong className="text-foreground">{sentTo || email}</strong>. It expires in 10 minutes.</p>
+          <label className="mt-7 block text-xs font-bold" htmlFor="manage-code">Verification code<input id="manage-code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={manageInputClass + ' text-center text-xl tracking-[0.45em] font-bold'} placeholder="123456" data-testid="input-manage-code" /></label>
+          {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
+          <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || code.length !== 6} data-testid="button-manage-verify">{sending ? 'Verifying…' : 'Verify & unlock'}</button>
+          <button type="button" className="mt-3 min-h-10 w-full rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted" onClick={() => { setStep('email'); setCode(''); setError(''); }}>Use a different email</button>
+        </form>
+      )}
     </main>
   );
 }
-
 
 function SeoMeta({ title, description, path }: { title: string; description: string; path: string }) {
   useEffect(() => {
