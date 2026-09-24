@@ -1107,9 +1107,9 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
   }
 
   if (status === 'unlocked') {
-PLACEHOLDER    if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
-PLACEHOLDER    if (location === '/manage/pos') return <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28"><div className="hv-surface w-full max-w-xl rounded-[2rem] p-8 text-center"><Calculator className="mx-auto text-secondary" size={32} /><SectionEyebrow>POINT OF SALE</SectionEyebrow><h1 className="hv-display text-5xl">POS is coming next.</h1><p className="mt-4 text-sm leading-6 text-muted-foreground">The POS workspace is reserved for the next build phase. Orders, billing, tables and sales tools will live here.</p><Link href="/manage" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"><ArrowLeft size={15} /> Back to dashboard</Link></div></main>;
-PLACEHOLDER    return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
+    if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
+    if (location === '/manage/pos') return <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28"><div className="hv-surface w-full max-w-xl rounded-[2rem] p-8 text-center"><Calculator className="mx-auto text-secondary" size={32} /><SectionEyebrow>POINT OF SALE</SectionEyebrow><h1 className="hv-display text-5xl">POS is coming next.</h1><p className="mt-4 text-sm leading-6 text-muted-foreground">The POS workspace is reserved for the next build phase. Orders, billing, tables and sales tools will live here.</p><Link href="/manage" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"><ArrowLeft size={15} /> Back to dashboard</Link></div></main>;
+    return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
 PLACEHOLDER  }
 
   return (
