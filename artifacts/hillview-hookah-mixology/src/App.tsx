@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Calculator, Check, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Edit3, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, LogOut, PackageOpen, Plus, RotateCcw, Send, Settings2, Sparkles, Star, Trash2, Wind, X } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
-import { AVOID_OPTIONS, TASTE_OPTIONS, type Flavour, type Premix, type Strength } from './data/flavours';
+import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
 import { CATALOG_STORAGE_KEY, readCatalog } from './logic/catalog';
 import { getRecommendations, type Recommendation } from './logic/recommendationEngine';
 import { getBatchRecipe } from './logic/recipe';
@@ -1090,6 +1090,169 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
   );
 }
 
+
+function SeoMeta({ title, description, path }: { title: string; description: string; path: string }) {
+  useEffect(() => {
+    document.title = title;
+    const canonicalUrl = \`https://mixology.monster\${path}\`;
+    const setMeta = (selector: string, attribute: 'name' | 'property', content: string) => {
+      let element = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!element) {
+        element = document.createElement('meta');
+        element.setAttribute(attribute, selector.match(/["']([^"']+)["']/)?.[1] ?? '');
+        document.head.appendChild(element);
+      }
+      element.setAttribute('content', content);
+    };
+    setMeta('meta[name="description"]', 'name', description);
+    setMeta('meta[property="og:title"]', 'property', title);
+    setMeta('meta[property="og:description"]', 'property', description);
+    setMeta('meta[property="og:url"]', 'property', canonicalUrl);
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+    return () => {
+      document.title = 'Mixology PRO | Hookah Flavours, Premixes & Custom Mixology';
+    };
+  }, [title, description, path]);
+  return null;
+}
+
+function FlavourSeoPage({ flavour, related }: { flavour: Flavour; related: Flavour[] }) {
+  const description = \`Explore \${flavour.name} hookah flavour by \${flavour.brand}: \${flavour.character} Discover its flavour profile, strength, and compatible Mixology PRO premixes.\`;
+  return (
+    <main className="hv-shell hv-page-in pb-32">
+      <SeoMeta title={\`\${flavour.name} Hookah Flavour | Mixology PRO\`} description={description} path={\`/flavours/\${flavour.id}\`} />
+      <section className="pt-5 md:pt-10">
+        <Link href="/flavours" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft size={15} /> All flavours</Link>
+        <div className="mt-7 grid gap-7 md:grid-cols-[auto_1fr] md:items-center">
+          <FlavourVisual flavour={flavour} size="lg" />
+          <div>
+            <p className="hv-mono text-[10px] text-accent">{flavour.brand} / HOOKAH FLAVOUR</p>
+            <h1 className="hv-display mt-2 text-5xl md:text-7xl">{flavour.name}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">{flavour.character}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {flavour.tags.map((tag) => <span className="rounded-full bg-muted px-3 py-1.5 text-xs font-semibold" key={tag}>{tag}</span>)}
+              <span className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1.5 text-xs font-semibold text-secondary">{flavour.strength} profile</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="mt-12 grid gap-5 md:grid-cols-2">
+        <article className="hv-surface rounded-[2rem] p-6">
+          <SectionEyebrow>FLAVOUR PROFILE</SectionEyebrow>
+          <h2 className="hv-display text-3xl">What it brings to a mix</h2>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">{flavour.character} Its listed profile includes {flavour.tags.join(', ').toLowerCase()} notes, making it useful as a base or accent depending on the recipe.</p>
+        </article>
+        <article className="hv-surface rounded-[2rem] p-6">
+          <SectionEyebrow>BUILD A MIX</SectionEyebrow>
+          <h2 className="hv-display text-3xl">Create your own blend</h2>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">Use the Mixology PRO builder to combine this flavour with other flavours and optionally set exact percentages.</p>
+          <Link href="/find" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">Build a mix <ArrowRight size={15} /></Link>
+        </article>
+      </section>
+      {related.length > 0 && (
+        <section className="mt-12">
+          <SectionEyebrow>YOU MAY ALSO LIKE</SectionEyebrow>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {related.map((item) => (
+              <Link href={\`/flavours/\${item.id}\`} className="hv-surface flex items-center gap-3 rounded-2xl p-3 hover:border-secondary/50" key={item.id}>
+                <FlavourVisual flavour={item} size="sm" />
+                <div className="min-w-0"><h3 className="hv-display truncate text-xl">{item.name}</h3><p className="text-[10px] text-muted-foreground">{item.brand}</p></div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
+
+function FlavoursSeoPage({ catalog }: { catalog: Catalog }) {
+  const items = defaultFlavours;
+  return (
+    <main className="hv-shell hv-page-in pb-32">
+      <SeoMeta title="Hookah Flavours | Flavour Guide | Mixology PRO" description="Explore hookah flavours by profile, strength, and flavour family. Browse the Mixology PRO flavour guide and build custom mixes." path="/flavours" />
+      <section className="pt-6 md:pt-12">
+        <p className="hv-mono text-[10px] text-accent">FLAVOUR ENCYCLOPEDIA</p>
+        <h1 className="hv-display mt-2 text-5xl md:text-7xl">Hookah Flavours</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">Browse the Mixology PRO flavour guide. Explore fruity, fresh, minty, citrus, floral, creamy, classic and exotic profiles, then use the builder to create a custom mix.</p>
+      </section>
+      <section className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((flavour) => {
+          const liveFlavour = catalog.flavours.find((item) => item.id === flavour.id) ?? flavour;
+          return <Link href={\`/flavours/\${flavour.id}\`} className="hv-surface flex gap-4 rounded-[1.5rem] p-4 hover:border-secondary/50" key={flavour.id}>
+            <FlavourVisual flavour={liveFlavour} size="md" />
+            <div className="min-w-0 pt-1"><p className="text-[9px] font-bold tracking-widest text-muted-foreground">{flavour.brand}</p><h2 className="hv-display mt-1 text-2xl">{flavour.name}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{flavour.character}</p><div className="mt-2 flex flex-wrap gap-1">{flavour.tags.slice(0,2).map(tag => <span className="rounded-full bg-muted px-2 py-1 text-[9px]" key={tag}>{tag}</span>)}</div></div>
+          </Link>;
+        })}
+      </section>
+    </main>
+  );
+}
+
+function PremixSeoPage({ premix, catalog }: { premix: Premix; catalog: Catalog }) {
+  const ingredients = premix.recipe.map((ingredient) => ({
+    ...ingredient,
+    flavour: catalog.flavours.find((item) => item.id === ingredient.flavourId) ?? defaultFlavours.find((item) => item.id === ingredient.flavourId),
+  })).filter((item) => item.flavour);
+  const description = \`\${premix.name} hookah premix recipe: \${premix.description} Explore the flavour percentages and build your own mix with Mixology PRO.\`;
+  return (
+    <main className="hv-shell hv-page-in pb-32">
+      <SeoMeta title={\`\${premix.name} Hookah Premix Recipe | Mixology PRO\`} description={description} path={\`/premixes/\${premix.id}\`} />
+      <section className="pt-5 md:pt-10">
+        <Link href="/premixes" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft size={15} /> All premixes</Link>
+        <div className="mt-7">
+          <p className="hv-mono text-[10px] text-accent">HOOKAH PREMIX / RECIPE</p>
+          <h1 className="hv-display mt-2 text-5xl md:text-7xl">{premix.name}</h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">{premix.description}</p>
+          <div className="mt-5 flex flex-wrap gap-2">{premix.profile.map(tag => <span className="rounded-full bg-muted px-3 py-1.5 text-xs font-semibold" key={tag}>{tag}</span>)}</div>
+        </div>
+      </section>
+      <section className="mt-10 grid gap-5 md:grid-cols-[1fr_1.2fr]">
+        <article className="hv-surface rounded-[2rem] p-6">
+          <SectionEyebrow>RECIPE</SectionEyebrow>
+          <h2 className="hv-display text-3xl">Mix percentages</h2>
+          <div className="mt-5 space-y-3">
+            {ingredients.map(({ flavour, percentage }) => flavour && <div className="flex items-center gap-3 rounded-2xl border border-border p-3" key={flavour.id}><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0 flex-1"><h3 className="font-semibold">{flavour.name}</h3><p className="text-[10px] text-muted-foreground">{flavour.brand}</p></div><span className="font-mono text-sm font-bold">{percentage}%</span></div>)}
+          </div>
+        </article>
+        <article className="hv-surface rounded-[2rem] p-6">
+          <SectionEyebrow>WHEN TO CHOOSE IT</SectionEyebrow>
+          <h2 className="hv-display text-3xl">Best for</h2>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">{premix.bestFor}</p>
+          <p className="mt-5 text-sm leading-7 text-muted-foreground">Use these percentages as the Mixology PRO starting recipe, then customise the balance in the builder if you want a different flavour emphasis.</p>
+          <Link href="/find" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">Build this mix <ArrowRight size={15} /></Link>
+        </article>
+      </section>
+    </main>
+  );
+}
+
+function PremixesSeoPage({ catalog }: { catalog: Catalog }) {
+  const items = defaultPremixes;
+  return (
+    <main className="hv-shell hv-page-in pb-32">
+      <SeoMeta title="Hookah Premixes & Recipes | Mixology PRO" description="Browse hookah premix recipes with flavour percentages. Discover fruity, minty, cooling, classic and exotic combinations on Mixology PRO." path="/premixes" />
+      <section className="pt-6 md:pt-12">
+        <p className="hv-mono text-[10px] text-accent">PREMIX LIBRARY</p>
+        <h1 className="hv-display mt-2 text-5xl md:text-7xl">Hookah Premixes</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">Explore ready-to-use flavour combinations with transparent percentages. Choose a premix as a starting point or customise the recipe in the Mixology PRO builder.</p>
+      </section>
+      <section className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((premix) => <Link href={\`/premixes/\${premix.id}\`} className="hv-surface rounded-[1.5rem] p-4 hover:border-secondary/50" key={premix.id}>
+          <div className="flex gap-4"><PremixVisual premix={premix} size="md" /><div className="min-w-0 pt-1"><h2 className="hv-display text-2xl">{premix.name}</h2><p className="mt-1 text-[10px] text-muted-foreground">{premix.profile.join(' · ')}</p></div></div>
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">{premix.description}</p>
+        </Link>)}
+      </section>
+    </main>
+  );
+}
+
 function NotFoundPage() {
   return <main className="hv-shell flex min-h-[60vh] flex-col items-center justify-center text-center"><span className="hv-mono text-[10px] text-accent">404 / WRONG TURN</span><h1 className="hv-display mt-4 text-5xl">That cloud drifted away.</h1><Link href="/" className="mt-7 flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground" data-testid="link-not-found-home">Back home <ArrowRight size={16} /></Link></main>;
 }
@@ -1100,6 +1263,19 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalo
       <Route path="/"><HomePage onFind={() => { setLaunch('fresh'); }} onSurprise={() => { setLaunch('surprise'); }} catalog={catalog} /></Route>
       <Route path="/find"><FinderPage onSave={onSave} editChoice={choice} launch={launch} catalog={catalog} /></Route>
       <Route path="/choice"><ChoicePage choice={choice} onEdit={onEdit} onReset={onReset} catalog={catalog} /></Route>
+      <Route path="/flavours"><FlavoursSeoPage catalog={catalog} /></Route>
+      <Route path="/flavours/:id">{(params) => {
+        const flavour = defaultFlavours.find((item) => item.id === params.id);
+        if (!flavour) return <NotFoundPage />;
+        const related = defaultFlavours.filter((item) => item.id !== flavour.id && item.tags.some((tag) => flavour.tags.includes(tag))).slice(0, 4);
+        return <FlavourSeoPage flavour={flavour} related={related} />;
+      }}</Route>
+      <Route path="/premixes"><PremixesSeoPage catalog={catalog} /></Route>
+      <Route path="/premixes/:id">{(params) => {
+        const premix = defaultPremixes.find((item) => item.id === params.id);
+        if (!premix) return <NotFoundPage />;
+        return <PremixSeoPage premix={premix} catalog={catalog} />;
+      }}</Route>
       <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
