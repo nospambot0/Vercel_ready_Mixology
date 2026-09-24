@@ -163,8 +163,8 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
       html: `<!doctype html><html><body style="margin:0;background:#f4f4f2;font-family:Arial,sans-serif;color:#171717"><div style="max-width:520px;margin:30px auto;background:#fff;padding:32px;border:1px solid #ddd;border-radius:18px"><div style="font-size:11px;letter-spacing:3px;color:#777">MIXOLOGY PRO / STAFF ACCESS</div><h1 style="margin:10px 0 6px;font-size:28px">Your login code</h1><p style="color:#666;font-size:14px;line-height:1.6">Use this one-time verification code to access the staff area.</p><div style="margin:26px 0;text-align:center;background:#f4f4f2;border-radius:14px;padding:20px;font-size:34px;font-weight:800;letter-spacing:8px">${code}</div><p style="color:#777;font-size:12px">This code expires in 10 minutes and can only be used once.</p></div></body></html>`,
     }),
   });
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error('The email provider rejected the verification email.');
+  if (!response) {
+    throw new Error('The email provider did not return a response.');
   }
 }
 
