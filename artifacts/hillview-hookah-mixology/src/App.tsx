@@ -145,26 +145,66 @@ function BrandMark() {
 
 function BottomNav({ choice }: { choice: Choice | null }) {
   const [location] = useLocation();
+  const [showSiteQr, setShowSiteQr] = useState(false);
+  const siteUrl = 'https://mixology.monster';
+  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(siteUrl)}&size=360&margin=2`;
   const items = [
     { href: '/', label: 'Home', icon: HomeIcon },
     { href: '/find', label: 'Find My Hookah', icon: Sparkles },
     { href: '/choice', label: 'My Choice', icon: Heart, count: choice ? '1' : undefined },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/90 px-3 pb-[max(.8rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:bottom-5 md:left-1/2 md:right-auto md:w-[480px] md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-2xl md:shadow-primary/10" aria-label="Primary navigation">
-      <div className="mx-auto grid max-w-lg grid-cols-3 gap-1">
-        {items.map(({ href, label, icon: Icon, count }) => {
-          const active = location === href || (href === '/find' && location.startsWith('/find'));
-          return (
-            <Link href={href} className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[10px] font-semibold transition-colors ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} key={href}>
-              <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
-              <span>{label}</span>
-              {count && <span className="absolute right-5 top-1 h-2 w-2 rounded-full bg-accent" aria-label="Saved choice" />}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/90 px-3 pb-[max(.8rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:bottom-5 md:left-1/2 md:right-auto md:w-[480px] md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-2xl md:shadow-primary/10" aria-label="Primary navigation">
+        <div className="mx-auto grid max-w-lg grid-cols-4 gap-1">
+          {items.map(({ href, label, icon: Icon, count }, index) => {
+            const active = location === href || (href === '/find' && location.startsWith('/find'));
+            return (
+              <React.Fragment key={href}>
+                {index === 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSiteQr(true)}
+                    className="relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted"
+                    aria-label="Show QR code to open Mixology PRO"
+                    data-testid="button-nav-site-qr"
+                  >
+                    <QrCode size={19} strokeWidth={2} />
+                    <span>QR Code</span>
+                  </button>
+                )}
+                <Link href={href} className={`relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[10px] font-semibold transition-colors ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} key={href}>
+                  <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
+                  <span>{label}</span>
+                  {count && <span className="absolute right-5 top-1 h-2 w-2 rounded-full bg-accent" aria-label="Saved choice" />}
+                </Link>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </nav>
+      {showSiteQr && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="site-qr-title" onClick={() => setShowSiteQr(false)}>
+          <div className="w-full max-w-sm rounded-[2rem] bg-background p-6 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="text-left">
+                <p className="hv-mono text-[10px] text-accent">SHARE MIXOLOGY PRO</p>
+                <h2 id="site-qr-title" className="hv-display mt-1 text-3xl">Scan to open</h2>
+              </div>
+              <button type="button" onClick={() => setShowSiteQr(false)} className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted" aria-label="Close QR code">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mx-auto mt-6 w-fit rounded-2xl bg-white p-4 shadow-inner">
+              <img src={qrUrl} alt="QR code to open Mixology PRO website" className="h-64 w-64" />
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">Scan this QR code with your phone camera to open Mixology PRO.</p>
+            <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground/70">{siteUrl}</p>
+            <button type="button" onClick={() => setShowSiteQr(false)} className="mt-5 min-h-11 w-full rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">Done</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
