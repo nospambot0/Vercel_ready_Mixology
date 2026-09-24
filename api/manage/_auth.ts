@@ -16,7 +16,7 @@ type ResponseLike = {
   end(body?: string): void;
 };
 
-function getEnv(name: 'SESSION_SECRET'): string {
+function getEnv(name: 'SESSION_SECRET' | 'MANAGE_PASSWORD'): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(`${name} must be configured in the Vercel project environment.`);
@@ -96,7 +96,7 @@ function readPassword(body: unknown): unknown {
 
 function matchesPassword(candidate: unknown): boolean {
   if (typeof candidate !== 'string') return false;
-  const expected = Buffer.from(MANAGE_PASSWORD);
+  const expected = Buffer.from(getEnv('MANAGE_PASSWORD'));
   const actual = Buffer.from(candidate);
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
