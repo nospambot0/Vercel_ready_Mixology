@@ -194,12 +194,104 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
   return <p className="hv-mono mb-4 text-[10px] font-medium text-accent">{children}</p>;
 }
 
+
+function HomeIntroAnimation() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('mixology-pro-home-intro-seen') === 'true') return;
+      setVisible(true);
+      const timer = window.setTimeout(() => {
+        localStorage.setItem('mixology-pro-home-intro-seen', 'true');
+        setVisible(false);
+      }, 4200);
+      return () => window.clearTimeout(timer);
+    } catch {
+      setVisible(true);
+      const timer = window.setTimeout(() => setVisible(false), 4200);
+      return () => window.clearTimeout(timer);
+    }
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-0 z-[90] overflow-hidden bg-[#090909]" aria-label="Mixology PRO introduction" role="status">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_65%,rgba(255,255,255,.08),transparent_34%),linear-gradient(180deg,#111_0%,#050505_100%)]" />
+      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 translate-y-[18%] animate-[mixology-hookah-rise_1.2s_ease-out_both]">
+        <svg width="150" height="230" viewBox="0 0 150 230" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M75 22C61 22 51 31 51 44C51 57 61 64 75 64C89 64 99 57 99 44C99 31 89 22 75 22Z" fill="rgba(190,190,190,.18)" stroke="rgba(255,255,255,.75)" strokeWidth="2"/>
+          <path d="M66 64H84L88 119C89 133 83 143 75 143C67 143 61 133 62 119L66 64Z" fill="rgba(180,180,180,.12)" stroke="rgba(255,255,255,.7)" strokeWidth="2"/>
+          <path d="M75 143V196" stroke="rgba(255,255,255,.75)" strokeWidth="4" strokeLinecap="round"/>
+          <path d="M42 198H108C112 198 115 201 115 205V208H35V205C35 201 38 198 42 198Z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.7)" strokeWidth="2"/>
+          <path d="M88 58C105 54 116 60 121 71C126 82 119 94 106 98" stroke="rgba(255,255,255,.7)" strokeWidth="3" strokeLinecap="round"/>
+          <path d="M121 71C133 72 139 80 137 89C135 98 127 102 119 100" stroke="rgba(255,255,255,.55)" strokeWidth="2.5" strokeLinecap="round"/>
+          <circle cx="75" cy="44" r="8" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.6)" />
+        </svg>
+      </div>
+
+      <div className="absolute left-1/2 top-[42%] z-10 h-40 w-40 -translate-x-1/2 rounded-full bg-white/10 blur-3xl animate-[mixology-smoke-core_3.8s_ease-out_both]" />
+      <div className="absolute left-[42%] top-[38%] h-32 w-32 rounded-full bg-white/[.07] blur-2xl animate-[mixology-smoke-1_3.7s_ease-out_both]" />
+      <div className="absolute left-[54%] top-[35%] h-44 w-44 rounded-full bg-white/[.08] blur-3xl animate-[mixology-smoke-2_4s_ease-out_both]" />
+      <div className="absolute left-[34%] top-[48%] h-52 w-52 rounded-full bg-white/[.06] blur-3xl animate-[mixology-smoke-3_4.1s_ease-out_both]" />
+      <div className="absolute left-[58%] top-[47%] h-60 w-60 rounded-full bg-white/[.055] blur-3xl animate-[mixology-smoke-4_4.2s_ease-out_both]" />
+
+      <div className="absolute bottom-12 left-1/2 z-30 -translate-x-1/2 text-center animate-[mixology-title-in_1s_.7s_ease-out_both]">
+        <p className="font-mono text-[10px] tracking-[.35em] text-white/40">WELCOME TO</p>
+        <p className="mt-2 font-serif text-4xl font-semibold tracking-tight text-white">Mixology PRO</p>
+      </div>
+
+      <style>{`
+        @keyframes mixology-hookah-rise {
+          from { opacity: 0; transform: translate(-50%, 30%) scale(.94); }
+          to { opacity: 1; transform: translate(-50%, 18%) scale(1); }
+        }
+        @keyframes mixology-smoke-core {
+          0% { opacity: 0; transform: translate(-50%, 35%) scale(.35); }
+          25% { opacity: .55; transform: translate(-50%, 0) scale(1); }
+          100% { opacity: .08; transform: translate(-50%, -260%) scale(3.6); }
+        }
+        @keyframes mixology-smoke-1 {
+          0% { opacity: 0; transform: translate(0, 35%) scale(.3); }
+          30% { opacity: .5; }
+          100% { opacity: 0; transform: translate(-70%, -220%) scale(3.5); }
+        }
+        @keyframes mixology-smoke-2 {
+          0% { opacity: 0; transform: translate(0, 35%) scale(.25); }
+          25% { opacity: .55; }
+          100% { opacity: 0; transform: translate(70%, -240%) scale(3.8); }
+        }
+        @keyframes mixology-smoke-3 {
+          0% { opacity: 0; transform: translate(0, 20%) scale(.25); }
+          28% { opacity: .42; }
+          100% { opacity: 0; transform: translate(-110%, -170%) scale(3.2); }
+        }
+        @keyframes mixology-smoke-4 {
+          0% { opacity: 0; transform: translate(0, 20%) scale(.25); }
+          30% { opacity: .4; }
+          100% { opacity: 0; transform: translate(120%, -180%) scale(3.4); }
+        }
+        @keyframes mixology-title-in {
+          from { opacity: 0; transform: translate(-50%, 12px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [class*="animate-[mixology-"] { animation: none !important; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
+  const [introEnabled] = useState(() => true);
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
   const shelfFlavours = catalog.flavours.slice(0, 8);
   const shelfPremixes = catalog.premixes.slice(0, 4);
   return (
     <main className="hv-shell hv-page-in">
+      {introEnabled && <HomeIntroAnimation />}
       <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
         <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
