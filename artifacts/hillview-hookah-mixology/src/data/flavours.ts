@@ -23,6 +23,7 @@ export type Premix = {
   profile: string[];
   description: string;
   bestFor: string;
+  photoUrl?: string;
 };
 
 export type PremixIngredient = {
