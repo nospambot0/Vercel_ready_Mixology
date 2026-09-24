@@ -1112,7 +1112,7 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Calculator size={26} /></div>
             <h2 className="hv-display mt-6 text-3xl">Manage POS</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">POS tools will be built here later for orders, billing and table operations.</p>
-            <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold text-muted-foreground">Coming soon</span><ChevronRight size={17} className="text-muted-foreground" /></div>
+            <div className="mt-6 flex items-center justify-end border-t border-border/70 pt-4"><ChevronRight size={17} className="text-muted-foreground" /></div>
           </Link>
         </div>
       </div>
