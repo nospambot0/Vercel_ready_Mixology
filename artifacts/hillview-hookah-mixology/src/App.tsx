@@ -800,6 +800,68 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalo
   );
 }
 
+function AgeGate() {
+  const [verified, setVerified] = useState<boolean | null>(() => {
+    try {
+      return localStorage.getItem('hillview-age-verified') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const confirmAge = () => {
+    try {
+      localStorage.setItem('hillview-age-verified', 'true');
+    } catch {
+      // Continue even if storage is unavailable.
+    }
+    setVerified(true);
+  };
+
+  if (verified === true) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-primary/95 px-5 py-8 text-primary-foreground backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
+      <div className="w-full max-w-md rounded-[2rem] border border-primary-foreground/15 bg-primary p-7 text-center shadow-2xl md:p-9">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+          <Flame size={25} />
+        </div>
+        <SectionEyebrow>HILLVIEW / AGE CHECK</SectionEyebrow>
+        <h1 id="age-gate-title" className="hv-display text-4xl md:text-5xl">Are you 18 or older?</h1>
+        <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-primary-foreground/70">
+          This site contains information about hookah and tobacco-related products. You must be 18 or older to enter.
+        </p>
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            className="hv-press flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-secondary px-5 font-bold text-secondary-foreground shadow-lg"
+            onClick={confirmAge}
+            data-testid="button-age-yes"
+          >
+            <Check size={17} /> YES, I’M 18+
+          </button>
+          <button
+            type="button"
+            className="hv-press flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/20 px-5 font-semibold text-primary-foreground hover:bg-primary-foreground/10"
+            onClick={() => setVerified(false)}
+            data-testid="button-age-no"
+          >
+            <X size={17} /> NO, EXIT
+          </button>
+        </div>
+        {verified === false && (
+          <p className="mt-5 rounded-xl bg-primary-foreground/10 px-3 py-2 text-xs font-semibold text-primary-foreground/80" role="alert">
+            You must be 18 or older to enter this site.
+          </p>
+        )}
+        <p className="mt-6 text-[10px] leading-4 text-primary-foreground/40">
+          Age confirmation is a self-declaration and does not verify your identity.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [, setLocation] = useLocation();
   const [choice, setChoice] = useState<Choice | null>(readChoice);
@@ -821,8 +883,10 @@ function App() {
   };
 
   return (
-    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-      <AppShell choice={choice}>
+    <>
+      <AgeGate />
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        <AppShell choice={choice}>
         <RouterView
           choice={choice}
           onSave={(next) => { setChoice(next); setLocation('/choice'); }}
@@ -832,9 +896,10 @@ function App() {
           setLaunch={setFinderLaunch}
            catalog={catalog}
            onCatalogChange={setCatalog}
-        />
-      </AppShell>
-    </WouterRouter>
+          />
+        </AppShell>
+      </WouterRouter>
+    </>
   );
 }
 
