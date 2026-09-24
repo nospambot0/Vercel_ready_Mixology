@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/hillview-hookah-mixology run build",
+  "outputDirectory": "artifacts/hillview-hookah-mixology/dist/public",
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
