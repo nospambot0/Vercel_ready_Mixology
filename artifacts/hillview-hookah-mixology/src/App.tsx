@@ -1253,6 +1253,23 @@ function PremixesSeoPage({ catalog }: { catalog: Catalog }) {
   );
 }
 
+function FlavourSeoRoute({ catalog }: { catalog: Catalog }) {
+  const [location] = useLocation();
+  const id = location.split('/')[2] ?? '';
+  const flavour = defaultFlavours.find((item) => item.id === id);
+  if (!flavour) return <NotFoundPage />;
+  const related = defaultFlavours.filter((item) => item.id !== flavour.id && item.tags.some((tag) => flavour.tags.includes(tag))).slice(0, 4);
+  return <FlavourSeoPage flavour={flavour} related={related} />;
+}
+
+function PremixSeoRoute({ catalog }: { catalog: Catalog }) {
+  const [location] = useLocation();
+  const id = location.split('/')[2] ?? '';
+  const premix = defaultPremixes.find((item) => item.id === id);
+  if (!premix) return <NotFoundPage />;
+  return <PremixSeoPage premix={premix} catalog={catalog} />;
+}
+
 function NotFoundPage() {
   return <main className="hv-shell flex min-h-[60vh] flex-col items-center justify-center text-center"><span className="hv-mono text-[10px] text-accent">404 / WRONG TURN</span><h1 className="hv-display mt-4 text-5xl">That cloud drifted away.</h1><Link href="/" className="mt-7 flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground" data-testid="link-not-found-home">Back home <ArrowRight size={16} /></Link></main>;
 }
@@ -1264,18 +1281,9 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalo
       <Route path="/find"><FinderPage onSave={onSave} editChoice={choice} launch={launch} catalog={catalog} /></Route>
       <Route path="/choice"><ChoicePage choice={choice} onEdit={onEdit} onReset={onReset} catalog={catalog} /></Route>
       <Route path="/flavours"><FlavoursSeoPage catalog={catalog} /></Route>
-      <Route path="/flavours/:id">{(params) => {
-        const flavour = defaultFlavours.find((item) => item.id === params.id);
-        if (!flavour) return <NotFoundPage />;
-        const related = defaultFlavours.filter((item) => item.id !== flavour.id && item.tags.some((tag) => flavour.tags.includes(tag))).slice(0, 4);
-        return <FlavourSeoPage flavour={flavour} related={related} />;
-      }}</Route>
+      <Route path="/flavours/:id"><FlavourSeoRoute catalog={catalog} /></Route>
       <Route path="/premixes"><PremixesSeoPage catalog={catalog} /></Route>
-      <Route path="/premixes/:id">{(params) => {
-        const premix = defaultPremixes.find((item) => item.id === params.id);
-        if (!premix) return <NotFoundPage />;
-        return <PremixSeoPage premix={premix} catalog={catalog} />;
-      }}</Route>
+      <Route path="/premixes/:id"><PremixSeoRoute catalog={catalog} /></Route>
       <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
