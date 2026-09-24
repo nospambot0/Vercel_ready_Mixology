@@ -34,7 +34,6 @@ export function readCatalog(): Catalog {
     const parsed = JSON.parse(saved) as Partial<Catalog>;
     const savedFlavours = Array.isArray(parsed.flavours) ? parsed.flavours.filter(isValidFlavour) : [];
     const savedPremixes = Array.isArray(parsed.premixes) ? parsed.premixes.filter(isValidPremix) : [];
-    const savedFlavourIds = new Set(savedFlavours.map((flavour) => flavour.id));
     const refreshedFlavours = savedFlavours.map((savedFlavour) => {
       const defaultFlavour = defaultFlavours.find((flavour) => flavour.id === savedFlavour.id);
       if (!defaultFlavour) return savedFlavour;
@@ -44,9 +43,8 @@ export function readCatalog(): Catalog {
         photoUrl: defaultFlavour.photoUrl ?? savedFlavour.photoUrl,
       };
     });
-    const missingDefaults = defaultFlavours.filter((flavour) => !savedFlavourIds.has(flavour.id));
     return {
-      flavours: Array.isArray(parsed.flavours) ? [...refreshedFlavours, ...missingDefaults] : defaultFlavours,
+      flavours: Array.isArray(parsed.flavours) ? refreshedFlavours as Catalog['flavours'] : defaultFlavours,
       premixes: Array.isArray(parsed.premixes) ? savedPremixes as Catalog['premixes'] : defaultPremixes,
     };
   } catch {
