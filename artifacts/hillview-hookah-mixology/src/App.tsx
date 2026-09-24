@@ -199,75 +199,130 @@ function HomeIntroAnimation() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
-    const timer = window.setTimeout(() => setVisible(false), 4200);
-    return () => window.clearTimeout(timer);
+    const show = window.setTimeout(() => setVisible(true), 30);
+    const hide = window.setTimeout(() => setVisible(false), 4800);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
+    };
   }, []);
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] overflow-hidden bg-[#090909]" aria-label="Mixology PRO introduction" role="status">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_65%,rgba(255,255,255,.08),transparent_34%),linear-gradient(180deg,#111_0%,#050505_100%)]" />
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 translate-y-[18%] animate-[mixology-hookah-rise_1.2s_ease-out_both]">
-        <svg width="150" height="230" viewBox="0 0 150 230" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M75 22C61 22 51 31 51 44C51 57 61 64 75 64C89 64 99 57 99 44C99 31 89 22 75 22Z" fill="rgba(190,190,190,.18)" stroke="rgba(255,255,255,.75)" strokeWidth="2"/>
-          <path d="M66 64H84L88 119C89 133 83 143 75 143C67 143 61 133 62 119L66 64Z" fill="rgba(180,180,180,.12)" stroke="rgba(255,255,255,.7)" strokeWidth="2"/>
-          <path d="M75 143V196" stroke="rgba(255,255,255,.75)" strokeWidth="4" strokeLinecap="round"/>
-          <path d="M42 198H108C112 198 115 201 115 205V208H35V205C35 201 38 198 42 198Z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.7)" strokeWidth="2"/>
-          <path d="M88 58C105 54 116 60 121 71C126 82 119 94 106 98" stroke="rgba(255,255,255,.7)" strokeWidth="3" strokeLinecap="round"/>
-          <path d="M121 71C133 72 139 80 137 89C135 98 127 102 119 100" stroke="rgba(255,255,255,.55)" strokeWidth="2.5" strokeLinecap="round"/>
-          <circle cx="75" cy="44" r="8" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.6)" />
+    <div className="mixology-intro" aria-label="Mixology PRO introduction" role="status">
+      <div className="mixology-intro-bg" />
+
+      <div className="mixology-intro-hookah">
+        <svg width="180" height="260" viewBox="0 0 180 260" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <ellipse cx="90" cy="232" rx="58" ry="10" fill="rgba(255,255,255,.08)" />
+          <path d="M90 28C73 28 60 39 60 56C60 73 73 82 90 82C107 82 120 73 120 56C120 39 107 28 90 28Z" fill="rgba(210,210,210,.16)" stroke="rgba(255,255,255,.9)" strokeWidth="2.5"/>
+          <path d="M78 82H102L107 140C108 157 101 169 90 169C79 169 72 157 73 140L78 82Z" fill="rgba(190,190,190,.12)" stroke="rgba(255,255,255,.85)" strokeWidth="2.5"/>
+          <path d="M90 169V218" stroke="rgba(255,255,255,.9)" strokeWidth="5" strokeLinecap="round"/>
+          <path d="M52 218H128C133 218 137 222 137 227V230H43V227C43 222 47 218 52 218Z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.85)" strokeWidth="2.5"/>
+          <path d="M103 74C124 68 139 76 146 90C153 104 145 119 128 123" stroke="rgba(255,255,255,.82)" strokeWidth="4" strokeLinecap="round"/>
+          <path d="M146 90C160 92 166 101 163 112C160 123 150 128 139 125" stroke="rgba(255,255,255,.65)" strokeWidth="3" strokeLinecap="round"/>
+          <circle cx="90" cy="56" r="10" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.75)" />
         </svg>
       </div>
 
-      <div className="absolute left-1/2 top-[42%] z-10 h-40 w-40 -translate-x-1/2 rounded-full bg-white/10 blur-3xl animate-[mixology-smoke-core_3.8s_ease-out_both]" />
-      <div className="absolute left-[42%] top-[38%] h-32 w-32 rounded-full bg-white/[.07] blur-2xl animate-[mixology-smoke-1_3.7s_ease-out_both]" />
-      <div className="absolute left-[54%] top-[35%] h-44 w-44 rounded-full bg-white/[.08] blur-3xl animate-[mixology-smoke-2_4s_ease-out_both]" />
-      <div className="absolute left-[34%] top-[48%] h-52 w-52 rounded-full bg-white/[.06] blur-3xl animate-[mixology-smoke-3_4.1s_ease-out_both]" />
-      <div className="absolute left-[58%] top-[47%] h-60 w-60 rounded-full bg-white/[.055] blur-3xl animate-[mixology-smoke-4_4.2s_ease-out_both]" />
+      <div className="mixology-smoke mixology-smoke-a" />
+      <div className="mixology-smoke mixology-smoke-b" />
+      <div className="mixology-smoke mixology-smoke-c" />
+      <div className="mixology-smoke mixology-smoke-d" />
+      <div className="mixology-smoke mixology-smoke-e" />
 
-      <div className="absolute bottom-12 left-1/2 z-30 -translate-x-1/2 text-center animate-[mixology-title-in_1s_.7s_ease-out_both]">
-        <p className="font-mono text-[10px] tracking-[.35em] text-white/40">WELCOME TO</p>
-        <p className="mt-2 font-serif text-4xl font-semibold tracking-tight text-white">Mixology PRO</p>
+      <div className="mixology-intro-title">
+        <p>WELCOME TO</p>
+        <strong>Mixology PRO</strong>
       </div>
 
       <style>{`
-        @keyframes mixology-hookah-rise {
-          from { opacity: 0; transform: translate(-50%, 30%) scale(.94); }
-          to { opacity: 1; transform: translate(-50%, 18%) scale(1); }
+        .mixology-intro {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          overflow: hidden;
+          background: #080808;
+          isolation: isolate;
+          pointer-events: none;
         }
-        @keyframes mixology-smoke-core {
-          0% { opacity: 0; transform: translate(-50%, 35%) scale(.35); }
-          25% { opacity: .55; transform: translate(-50%, 0) scale(1); }
-          100% { opacity: .08; transform: translate(-50%, -260%) scale(3.6); }
+        .mixology-intro-bg {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(circle at 50% 58%, rgba(255,255,255,.12), transparent 24%),
+            radial-gradient(circle at 50% 90%, rgba(255,255,255,.07), transparent 38%),
+            linear-gradient(180deg, #151515 0%, #050505 100%);
         }
-        @keyframes mixology-smoke-1 {
-          0% { opacity: 0; transform: translate(0, 35%) scale(.3); }
-          30% { opacity: .5; }
-          100% { opacity: 0; transform: translate(-70%, -220%) scale(3.5); }
+        .mixology-intro-hookah {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          z-index: 4;
+          transform: translate(-50%, 2%);
+          animation: mixology-hookah-in 1.1s ease-out both;
         }
-        @keyframes mixology-smoke-2 {
-          0% { opacity: 0; transform: translate(0, 35%) scale(.25); }
-          25% { opacity: .55; }
-          100% { opacity: 0; transform: translate(70%, -240%) scale(3.8); }
+        .mixology-smoke {
+          position: absolute;
+          z-index: 5;
+          left: 50%;
+          top: 48%;
+          width: 150px;
+          height: 150px;
+          border-radius: 999px;
+          background: rgba(245,245,245,.16);
+          filter: blur(28px);
+          opacity: 0;
+          transform: translate(-50%, 30%) scale(.35);
+          animation: mixology-smoke-rise 4.3s ease-out both;
         }
-        @keyframes mixology-smoke-3 {
-          0% { opacity: 0; transform: translate(0, 20%) scale(.25); }
-          28% { opacity: .42; }
-          100% { opacity: 0; transform: translate(-110%, -170%) scale(3.2); }
+        .mixology-smoke-a { animation-delay: .15s; }
+        .mixology-smoke-b { animation-delay: .45s; width: 190px; height: 190px; margin-left: 65px; background: rgba(255,255,255,.12); }
+        .mixology-smoke-c { animation-delay: .75s; width: 175px; height: 175px; margin-left: -75px; background: rgba(230,230,230,.11); }
+        .mixology-smoke-d { animation-delay: 1.05s; width: 220px; height: 220px; margin-left: 105px; background: rgba(255,255,255,.09); }
+        .mixology-smoke-e { animation-delay: 1.35s; width: 210px; height: 210px; margin-left: -120px; background: rgba(235,235,235,.09); }
+        .mixology-intro-title {
+          position: absolute;
+          z-index: 8;
+          left: 50%;
+          bottom: 52px;
+          width: 100%;
+          text-align: center;
+          color: white;
+          transform: translateX(-50%);
+          animation: mixology-title-in .9s .5s ease-out both;
         }
-        @keyframes mixology-smoke-4 {
-          0% { opacity: 0; transform: translate(0, 20%) scale(.25); }
-          30% { opacity: .4; }
-          100% { opacity: 0; transform: translate(120%, -180%) scale(3.4); }
+        .mixology-intro-title p {
+          margin: 0;
+          font: 500 10px/1 monospace;
+          letter-spacing: .35em;
+          color: rgba(255,255,255,.45);
+        }
+        .mixology-intro-title strong {
+          display: block;
+          margin-top: 10px;
+          font: 600 38px/1 Georgia, serif;
+          letter-spacing: -.03em;
+        }
+        @keyframes mixology-hookah-in {
+          from { opacity: 0; transform: translate(-50%, 14%) scale(.88); }
+          to { opacity: 1; transform: translate(-50%, 2%) scale(1); }
+        }
+        @keyframes mixology-smoke-rise {
+          0% { opacity: 0; transform: translate(-50%, 28%) scale(.3); }
+          18% { opacity: .7; }
+          45% { opacity: .48; transform: translate(-50%, -70%) scale(1.35); }
+          100% { opacity: 0; transform: translate(-50%, -390%) scale(4.2); }
         }
         @keyframes mixology-title-in {
-          from { opacity: 0; transform: translate(-50%, 12px); }
+          from { opacity: 0; transform: translate(-50%, 14px); }
           to { opacity: 1; transform: translate(-50%, 0); }
         }
         @media (prefers-reduced-motion: reduce) {
-          [class*="animate-[mixology-"] { animation: none !important; }
+          .mixology-intro-hookah,
+          .mixology-smoke,
+          .mixology-intro-title { animation: none; opacity: 1; }
         }
       `}</style>
     </div>
