@@ -197,12 +197,14 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
 }
 
 
+const HOME_INTRO_HOOKAH = 'data:image/webp;base64,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';
+
 function HomeIntroAnimation() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const show = window.setTimeout(() => setVisible(true), 30);
-    const hide = window.setTimeout(() => setVisible(false), 4800);
+    const hide = window.setTimeout(() => setVisible(false), 5200);
     return () => {
       window.clearTimeout(show);
       window.clearTimeout(hide);
@@ -212,119 +214,114 @@ function HomeIntroAnimation() {
   if (!visible) return null;
 
   return (
-    <div className="mixology-intro" aria-label="Mixology PRO introduction" role="status">
-      <div className="mixology-intro-bg" />
-
-      <div className="mixology-intro-hookah">
-        <svg width="180" height="260" viewBox="0 0 180 260" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <ellipse cx="90" cy="232" rx="58" ry="10" fill="rgba(255,255,255,.08)" />
-          <path d="M90 28C73 28 60 39 60 56C60 73 73 82 90 82C107 82 120 73 120 56C120 39 107 28 90 28Z" fill="rgba(210,210,210,.16)" stroke="rgba(255,255,255,.9)" strokeWidth="2.5"/>
-          <path d="M78 82H102L107 140C108 157 101 169 90 169C79 169 72 157 73 140L78 82Z" fill="rgba(190,190,190,.12)" stroke="rgba(255,255,255,.85)" strokeWidth="2.5"/>
-          <path d="M90 169V218" stroke="rgba(255,255,255,.9)" strokeWidth="5" strokeLinecap="round"/>
-          <path d="M52 218H128C133 218 137 222 137 227V230H43V227C43 222 47 218 52 218Z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.85)" strokeWidth="2.5"/>
-          <path d="M103 74C124 68 139 76 146 90C153 104 145 119 128 123" stroke="rgba(255,255,255,.82)" strokeWidth="4" strokeLinecap="round"/>
-          <path d="M146 90C160 92 166 101 163 112C160 123 150 128 139 125" stroke="rgba(255,255,255,.65)" strokeWidth="3" strokeLinecap="round"/>
-          <circle cx="90" cy="56" r="10" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.75)" />
-        </svg>
+    <div className="mixology-intro" aria-label="Mixology PRO hookah introduction" role="status">
+      <div className="mixology-intro-image-wrap">
+        <img src={HOME_INTRO_HOOKAH} alt="Hookah with flowing smoke" className="mixology-intro-image" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-a" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-b" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-c" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-d" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-e" />
+        <div className="mixology-flow-smoke mixology-flow-smoke-f" />
       </div>
-
-      <div className="mixology-smoke mixology-smoke-a" />
-      <div className="mixology-smoke mixology-smoke-b" />
-      <div className="mixology-smoke mixology-smoke-c" />
-      <div className="mixology-smoke mixology-smoke-d" />
-      <div className="mixology-smoke mixology-smoke-e" />
-
-      <div className="mixology-intro-title">
-        <p>WELCOME TO</p>
-        <strong>Mixology PRO</strong>
-      </div>
-
       <style>{`
         .mixology-intro {
           position: fixed;
           inset: 0;
           z-index: 9999;
+          display: grid;
+          place-items: center;
           overflow: hidden;
-          background: #080808;
+          background: #000;
           isolation: isolate;
           pointer-events: none;
         }
-        .mixology-intro-bg {
+        .mixology-intro-image-wrap {
+          position: relative;
+          width: min(94vw, 760px);
+          height: min(94vw, 760px);
+          display: grid;
+          place-items: center;
+          animation: mixology-hookah-breathe 5.2s ease-in-out both;
+        }
+        .mixology-intro-image {
           position: absolute;
           inset: 0;
-          background:
-            radial-gradient(circle at 50% 58%, rgba(255,255,255,.12), transparent 24%),
-            radial-gradient(circle at 50% 90%, rgba(255,255,255,.07), transparent 38%),
-            linear-gradient(180deg, #151515 0%, #050505 100%);
-        }
-        .mixology-intro-hookah {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          z-index: 4;
-          transform: translate(-50%, 2%);
-          animation: mixology-hookah-in 1.1s ease-out both;
-        }
-        .mixology-smoke {
-          position: absolute;
-          z-index: 5;
-          left: 50%;
-          top: 48%;
-          width: 150px;
-          height: 150px;
-          border-radius: 999px;
-          background: rgba(245,245,245,.16);
-          filter: blur(28px);
-          opacity: 0;
-          transform: translate(-50%, 30%) scale(.35);
-          animation: mixology-smoke-rise 4.3s ease-out both;
-        }
-        .mixology-smoke-a { animation-delay: .15s; }
-        .mixology-smoke-b { animation-delay: .45s; width: 190px; height: 190px; margin-left: 65px; background: rgba(255,255,255,.12); }
-        .mixology-smoke-c { animation-delay: .75s; width: 175px; height: 175px; margin-left: -75px; background: rgba(230,230,230,.11); }
-        .mixology-smoke-d { animation-delay: 1.05s; width: 220px; height: 220px; margin-left: 105px; background: rgba(255,255,255,.09); }
-        .mixology-smoke-e { animation-delay: 1.35s; width: 210px; height: 210px; margin-left: -120px; background: rgba(235,235,235,.09); }
-        .mixology-intro-title {
-          position: absolute;
-          z-index: 8;
-          left: 50%;
-          bottom: 52px;
           width: 100%;
-          text-align: center;
-          color: white;
-          transform: translateX(-50%);
-          animation: mixology-title-in .9s .5s ease-out both;
-        }
-        .mixology-intro-title p {
-          margin: 0;
-          font: 500 10px/1 monospace;
-          letter-spacing: .35em;
-          color: rgba(255,255,255,.45);
-        }
-        .mixology-intro-title strong {
+          height: 100%;
+          object-fit: contain;
           display: block;
-          margin-top: 10px;
-          font: 600 38px/1 Georgia, serif;
-          letter-spacing: -.03em;
+          user-select: none;
+          -webkit-user-drag: none;
+          animation: mixology-hookah-reveal 1s ease-out both;
         }
-        @keyframes mixology-hookah-in {
-          from { opacity: 0; transform: translate(-50%, 14%) scale(.88); }
-          to { opacity: 1; transform: translate(-50%, 2%) scale(1); }
+        .mixology-flow-smoke {
+          position: absolute;
+          left: 50%;
+          top: 31%;
+          width: 20%;
+          height: 20%;
+          border-radius: 50%;
+          background:
+            radial-gradient(ellipse at 35% 55%, rgba(255,255,255,.46) 0 12%, transparent 42%),
+            radial-gradient(ellipse at 65% 45%, rgba(235,235,235,.36) 0 14%, transparent 48%),
+            radial-gradient(ellipse at 50% 72%, rgba(255,255,255,.28) 0 11%, transparent 45%);
+          filter: blur(13px);
+          opacity: 0;
+          transform: translate(-50%, 5%) scale(.35) rotate(0deg);
+          mix-blend-mode: screen;
+          animation: mixology-flow 4.7s ease-out both;
         }
-        @keyframes mixology-smoke-rise {
-          0% { opacity: 0; transform: translate(-50%, 28%) scale(.3); }
-          18% { opacity: .7; }
-          45% { opacity: .48; transform: translate(-50%, -70%) scale(1.35); }
-          100% { opacity: 0; transform: translate(-50%, -390%) scale(4.2); }
+        .mixology-flow-smoke-a { animation-delay: .25s; }
+        .mixology-flow-smoke-b { width: 25%; height: 25%; margin-left: -11%; animation-delay: .55s; animation-duration: 4.4s; }
+        .mixology-flow-smoke-c { width: 23%; height: 23%; margin-left: 10%; animation-delay: .8s; animation-duration: 4.9s; }
+        .mixology-flow-smoke-d { width: 18%; height: 28%; margin-left: -18%; animation-delay: 1.1s; animation-duration: 4.3s; }
+        .mixology-flow-smoke-e { width: 19%; height: 30%; margin-left: 17%; animation-delay: 1.35s; animation-duration: 4.6s; }
+        .mixology-flow-smoke-f { width: 16%; height: 22%; margin-left: 2%; animation-delay: 1.65s; animation-duration: 4.8s; }
+        @keyframes mixology-hookah-reveal {
+          from { opacity: 0; transform: scale(.94); }
+          to { opacity: 1; transform: scale(1); }
         }
-        @keyframes mixology-title-in {
-          from { opacity: 0; transform: translate(-50%, 14px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
+        @keyframes mixology-hookah-breathe {
+          0%, 100% { transform: scale(.985); }
+          48% { transform: scale(1.015); }
+        }
+        @keyframes mixology-flow {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 5%) scale(.28) rotate(-8deg);
+          }
+          16% { opacity: .62; }
+          38% {
+            opacity: .52;
+            transform: translate(calc(-50% + 8vw), -35%) scale(.9) rotate(9deg);
+          }
+          68% {
+            opacity: .32;
+            transform: translate(calc(-50% - 9vw), -95%) scale(1.65) rotate(-7deg);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + 7vw), -190%) scale(2.8) rotate(12deg);
+          }
+        }
+        @media (max-width: 640px) {
+          .mixology-intro-image-wrap {
+            width: 100vw;
+            height: 100vw;
+          }
+          .mixology-flow-smoke {
+            filter: blur(10px);
+          }
         }
         @media (prefers-reduced-motion: reduce) {
-          .mixology-intro-hookah,
-          .mixology-smoke,
-          .mixology-intro-title { animation: none; opacity: 1; }
+          .mixology-intro-image-wrap,
+          .mixology-intro-image,
+          .mixology-flow-smoke {
+            animation: none;
+          }
+          .mixology-intro-image { opacity: 1; }
+          .mixology-flow-smoke { opacity: .22; }
         }
       `}</style>
     </div>
