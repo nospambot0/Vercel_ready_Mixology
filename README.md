@@ -13,3 +13,5 @@ Explore flavour profiles, browse premix recipes with percentages, and build a cu
 - Mix builder: https://mixology.monster/find
 
 This repository contains the web application powering Mixology.Monster.
+
+<!-- Vercel deployment trigger: September 24, 2026 -->
