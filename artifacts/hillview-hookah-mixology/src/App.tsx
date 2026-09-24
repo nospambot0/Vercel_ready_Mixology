@@ -244,7 +244,7 @@ function HomeIntroAnimation() {
 
   useEffect(() => {
     const show = window.setTimeout(() => setVisible(true), 30);
-    const hide = window.setTimeout(() => setVisible(false), 5200);
+    const hide = window.setTimeout(() => setVisible(false), 2000);
     return () => {
       window.clearTimeout(show);
       window.clearTimeout(hide);
@@ -282,7 +282,7 @@ function HomeIntroAnimation() {
           height: min(94vw, 760px);
           display: grid;
           place-items: center;
-          animation: mixology-hookah-breathe 5.2s ease-in-out both;
+          animation: mixology-hookah-breathe 2s ease-in-out both;
         }
         .mixology-intro-image {
           position: absolute;
