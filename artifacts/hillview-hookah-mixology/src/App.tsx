@@ -1051,7 +1051,7 @@ function PosPage() {
     try {
       const response = await fetch('/api/pos/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ to: email.trim(), bill: { ...bill, upi: PAYEE_UPI } }) });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Could not send the receipt.');
+      if (!response.ok) throw new Error(data.error || data.message || 'Could not send the receipt.');
       setEmailState('sent');
     } catch (error) {
       setEmailState('error'); setEmailError(error instanceof Error ? error.message : 'Could not send the receipt.');
