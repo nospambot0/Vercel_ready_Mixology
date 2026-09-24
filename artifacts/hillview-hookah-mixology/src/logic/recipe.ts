@@ -28,6 +28,16 @@ export function getRecipeForChoice(choice: Choice, availableFlavours = defaultFl
   const selectedFlavours = (choice.flavourIds ?? []).map((id) => availableFlavours.find((flavour) => flavour.id === id)).filter((flavour): flavour is Flavour => Boolean(flavour));
   if (!selectedFlavours.length) return [];
 
+  const hasExplicitPercentages = Boolean(choice.percentages && selectedFlavours.every((flavour) => Number.isFinite(choice.percentages?.[flavour.id])));
+  if (hasExplicitPercentages) {
+    const explicitLines = selectedFlavours.map((flavour) => ({
+      flavour,
+      percentage: Math.max(0, Number(choice.percentages?.[flavour.id] ?? 0)),
+      customization: choice.customizations?.[flavour.id] ?? 'Normal',
+    }));
+    return normalizePercentages(explicitLines);
+  }
+
   const hasPremixRecipe = Boolean(premix && selectedFlavours.length === premix.recipe.length && selectedFlavours.every((flavour) => premix.recipe.some((ingredient) => ingredient.flavourId === flavour.id)));
   const baseLines = selectedFlavours.map((flavour) => {
     const basePercentage = hasPremixRecipe ? premix?.recipe.find((ingredient) => ingredient.flavourId === flavour.id)?.percentage ?? 0 : 100 / selectedFlavours.length;
