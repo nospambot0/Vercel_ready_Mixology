@@ -49,7 +49,7 @@ export default async function handler(req: any, res: any): Promise<void> {
       body: JSON.stringify({ from, to: [to], subject: `Mixology POS Receipt — ${billId}`, html, text: `Mixology POS\\nPayment Receipt\\nBill: ${billId}\\nAmount: ₹${amountText}\\nPayment: UPI\\nPaid to: ${paidTo}\\nRemark: ${remark}\\nDate: ${date}\\nStatus: PAID` }),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) { res.statusCode = 502; res.end(JSON.stringify({ error: result?.message || 'Email provider rejected the message.' })); return; }
+    if (response.status < 200 || response.status >= 300) { res.statusCode = 502; res.end(JSON.stringify({ error: result?.message || 'Email provider rejected the message.' })); return; }
     res.statusCode = 200; res.end(JSON.stringify({ sent: true, id: result?.id }));
   } catch { res.statusCode = 502; res.end(JSON.stringify({ error: 'Could not connect to the email provider.' })); }
 }
