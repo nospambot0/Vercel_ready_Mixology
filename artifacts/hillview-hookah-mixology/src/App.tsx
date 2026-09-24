@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Edit3, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, LogOut, PackageOpen, Plus, RotateCcw, Send, Settings2, Sparkles, Star, Trash2, Wind, X } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
@@ -160,7 +160,7 @@ function BottomNav({ choice }: { choice: Choice | null }) {
           {items.map(({ href, label, icon: Icon, count }, index) => {
             const active = location === href || (href === '/find' && location.startsWith('/find'));
             return (
-              <React.Fragment key={href}>
+              <Fragment key={href}>
                 {index === 1 && (
                   <button
                     type="button"
@@ -178,7 +178,7 @@ function BottomNav({ choice }: { choice: Choice | null }) {
                   <span>{label}</span>
                   {count && <span className="absolute right-5 top-1 h-2 w-2 rounded-full bg-accent" aria-label="Saved choice" />}
                 </Link>
-              </React.Fragment>
+              </Fragment>
             );
           })}
         </div>
