@@ -10,11 +10,11 @@ export function buildWhatsAppMessage(choice: Choice, availableFlavours?: Flavour
     .join('\n');
 
   return [
-    'Hello Hillview Hookah Expert,',
+    'Hello Mixology PRO Expert,',
     '',
-    'I found my customised choice with Hillview Hookah Mixology.',
+    'I found my customised choice with Mixology PRO.',
     '',
-    `Recommended Mix: ${choice.mixName || 'A thoughtful Hillview mix'}`,
+    `Recommended Mix: ${choice.mixName || 'A thoughtful Mixology PRO mix'}`,
     `Flavours:\n${flavourText || 'Surprise me with a thoughtful mix.'}`,
     `Taste: ${choice.tastes.length ? choice.tastes.join(', ') : 'Surprise me'}`,
     `Strength: ${choice.strength}`,
@@ -22,7 +22,7 @@ export function buildWhatsAppMessage(choice: Choice, availableFlavours?: Flavour
     `Remarks: ${choice.remarks.trim() || 'None'}`,
     '',
     'Please prepare this choice for my table.',
-    '— Hillview Hookah Mixology',
+    '— Mixology PRO',
   ].join('\n');
 }
 
