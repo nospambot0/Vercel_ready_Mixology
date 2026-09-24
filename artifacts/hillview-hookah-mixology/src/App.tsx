@@ -347,8 +347,7 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
             <button className="hv-press flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground shadow-lg shadow-secondary/20" onClick={onFind} data-testid="button-find-my-hookah">
               FIND MY HOOKAH <ArrowRight size={18} />
             </button>
-            <button className="hv-press flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/20 px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/10" onClick={onSurprise} data-testid="button-surprise-me">
-              <Sparkles size={17} /> SURPRISE ME
+            <button className="hv-press flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/20 px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/10" onClick={onSurprise} data-testid="button-surprise-me">              <Sparkles size={17} /> SURPRISE ME
             </button>
           </div>
         </div>
@@ -697,8 +696,7 @@ function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: 
                       <div className="flex items-start justify-between gap-3"><div><p className="hv-mono text-[10px] text-accent">{recommendation.title}</p><h2 className="hv-display mt-1 text-3xl">{recommendation.mix.name}</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[9px] text-muted-foreground">{recommendation.strength}</span></div>
                       <p className="mt-2 text-xs text-muted-foreground">{recommendation.pairing}</p>
                       <p className="mt-4 max-w-xl text-sm leading-6">{recommendation.description}</p>
-                      <div className="mt-5 flex flex-wrap gap-2">{recommendation.flavours.map((flavour) => <span className="rounded-full border border-border px-3 py-1 text-[10px] text-muted-foreground" key={flavour.id}>{flavour.name}</span>)}</div>
-                    </div>
+                      <div className="mt-5 flex flex-wrap gap-2">{recommendation.flavours.map((flavour) => <span className="rounded-full border border-border px-3 py-1 text-[10px] text-muted-foreground" key={flavour.id}>{flavour.name}</span>)}</div>                    </div>
                   </div>
                   <div className="mt-6 flex flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:justify-end">
                     <button className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setActiveDetail(recommendation)} data-testid={`button-details-${recommendation.mix.id}`}>See the blend <ChevronDown size={15} /></button>
@@ -856,7 +854,7 @@ function createOrb(seed: string) {
   };
 }
 
-function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChange: (next: Catalog) => void; onLogout: () => void }) {
+function ManagePage({ catalog, onChange, onLogout, section = 'flavours' }: { catalog: Catalog; onChange: (next: Catalog) => void; onLogout: () => void; section?: 'flavours' | 'premixes' }) {
   const [flavourForm, setFlavourForm] = useState({ name: '', brand: '', tags: 'Fruity, Fresh', strength: 'Medium' as Strength, character: '', photoUrl: '' });
   const [premixForm, setPremixForm] = useState({ name: '', profile: 'Fruity, Fresh', description: '', bestFor: '' });
   const [selectedIngredients, setSelectedIngredients] = useState<Record<string, string>>({});
@@ -1028,7 +1026,44 @@ function ManagePage({ catalog, onChange, onLogout }: { catalog: Catalog; onChang
   );
 }
 
-function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {
+function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: () => void }) {
+  return (
+    <main className="hv-shell hv-page-in pb-28">
+      <div className="mx-auto max-w-5xl">
+        <SectionEyebrow>STAFF CONTROL CENTER</SectionEyebrow>
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1 className="hv-display text-5xl md:text-7xl">Manage Dashboard</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Choose what you want to manage. POS is reserved for the next phase.</p>
+          </div>
+          <button className="flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-border px-4 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground" onClick={onLogout} data-testid="button-dashboard-logout"><LogOut size={15} /> Lock</button>
+        </div>
+        <div className="mt-9 grid gap-4 md:grid-cols-3">
+          <Link href="/manage/flavours" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-flavours">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><PackageOpen size={26} /></div>
+            <h2 className="hv-display mt-6 text-3xl">Manage Flavour</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Add, review and remove active flavour profiles used by the customer finder.</p>
+            <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">{catalog.flavours.length} flavours</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div>
+          </Link>
+          <Link href="/manage/premixes" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-premixes">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><ClipboardList size={26} /></div>
+            <h2 className="hv-display mt-6 text-3xl">Manage Premixes</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Create and maintain premix recipes, flavour percentages and customer-facing descriptions.</p>
+            <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">{catalog.premixes.length} premixes</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div>
+          </Link>
+          <Link href="/manage/pos" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-pos">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Calculator size={26} /></div>
+            <h2 className="hv-display mt-6 text-3xl">Manage POS</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">POS tools will be built here later for orders, billing and table operations.</p>
+            <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold text-muted-foreground">Coming soon</span><ChevronRight size={17} className="text-muted-foreground" /></div>
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {\n  const [location, setLocation] = useLocation();
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -1047,8 +1082,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     setError('');
     try {
       const response = await fetch('/api/manage/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ password }),
       });
@@ -1073,7 +1107,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     return <main className="hv-shell hv-page-in flex min-h-[60vh] items-center justify-center"><div className="hv-surface rounded-3xl px-8 py-10 text-center"><Settings2 className="mx-auto text-secondary" size={24} /><p className="mt-4 text-sm font-semibold">Checking staff access…</p></div></main>;
   }
 
-  if (status === 'unlocked') return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} />;
+  if (status === 'unlocked') {\n    if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;\n    if (location === '/manage/pos') return <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28"><div className="hv-surface w-full max-w-xl rounded-[2rem] p-8 text-center"><Calculator className="mx-auto text-secondary" size={32} /><SectionEyebrow>POINT OF SALE</SectionEyebrow><h1 className="hv-display text-5xl">POS is coming next.</h1><p className="mt-4 text-sm leading-6 text-muted-foreground">The POS workspace is reserved for the next build phase. Orders, billing, tables and sales tools will live here.</p><Link href="/manage" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"><ArrowLeft size={15} /> Back to dashboard</Link></div></main>;\n    return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;\n  }
 
   return (
     <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28">
@@ -1284,7 +1318,7 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalo
       <Route path="/flavours/:id"><FlavourSeoRoute catalog={catalog} /></Route>
       <Route path="/premixes"><PremixesSeoPage catalog={catalog} /></Route>
       <Route path="/premixes/:id"><PremixSeoRoute catalog={catalog} /></Route>
-      <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
+      <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/flavours"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/premixes"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>\n      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
   );
