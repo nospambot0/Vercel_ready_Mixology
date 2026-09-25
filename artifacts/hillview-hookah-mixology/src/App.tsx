@@ -1190,25 +1190,23 @@ function playQueueChime(audioContextRef?: { current: AudioContext | null }) {
     if (!AudioContextClass) return;
     const context = audioContextRef?.current ?? new AudioContextClass();
     if (audioContextRef && !audioContextRef.current) audioContextRef.current = context;
-    const start = () => {
+    const play = () => {
+      const now = context.currentTime;
       const oscillator = context.createOscillator();
       const gain = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, context.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(660, context.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.0001, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(1046.5, now);
+      oscillator.frequency.exponentialRampToValueAtTime(784, now + 0.18);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
       oscillator.connect(gain);
       gain.connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.17);
+      oscillator.start(now);
+      oscillator.stop(now + 0.3);
     };
-    if (context.state === 'suspended') {
-      void context.resume().then(start).catch(() => undefined);
-    } else {
-      start();
-    }
+    if (context.state === 'suspended') void context.resume().then(play).catch(() => undefined);
+    else play();
   } catch {}
 }
 
@@ -1331,6 +1329,7 @@ function DJPage() {
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const audioUnlockedRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
@@ -1360,9 +1359,28 @@ function DJPage() {
   };
 
   useEffect(() => {
+    const unlockAudio = () => {
+      if (audioUnlockedRef.current) return;
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
+        const context = audioContextRef.current ?? new AudioContextClass();
+        audioContextRef.current = context;
+        if (context.state === 'suspended') void context.resume();
+        audioUnlockedRef.current = true;
+        window.removeEventListener('touchstart', unlockAudio);
+        window.removeEventListener('click', unlockAudio);
+      } catch {}
+    };
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('click', unlockAudio);
     void loadQueue();
-    const timer = window.setInterval(() => void loadQueue(), 3000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => void loadQueue(), 2000);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('click', unlockAudio);
+    };
   }, []);
 
   const control = async (action: string, id?: string) => {
