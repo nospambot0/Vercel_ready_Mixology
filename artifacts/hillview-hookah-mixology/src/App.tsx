@@ -1241,24 +1241,7 @@ function DJRequestPage() {
       setUrl('');
       setRequesterName('');
       setMessage('Added to the DJ queue.');
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const audioContext = new AudioContextClass();
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.055, audioContext.currentTime + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.16);
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.17);
-        oscillator.addEventListener('ended', () => void audioContext.close(), { once: true });
-      } catch {}
-      await loadQueue();
+    await loadQueue();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not add that song.');
     } finally { setAdding(false); }
