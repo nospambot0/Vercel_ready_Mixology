@@ -1172,6 +1172,8 @@ type DJItem = {
   title: string;
   status: DJStatus;
   createdAt: string;
+  requesterName?: string;
+  requesterUrl?: string | null;
 };
 
 function DJSourceIcon({ size = 16 }: { source: DJSource; size?: number }) {
@@ -1198,6 +1200,8 @@ function extractYouTubeId(raw: string): string | null {
 
 function DJRequestPage() {
   const [url, setUrl] = useState('');
+  const [requesterName, setRequesterName] = useState('');
+  const [requesterUrl, setRequesterUrl] = useState('');
   const [items, setItems] = useState<DJItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -1231,12 +1235,31 @@ function DJRequestPage() {
       const response = await fetch('/api/dj/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify({ url: trimmed, requesterName: requesterName.trim(), requesterUrl: requesterUrl.trim() || undefined }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not add that song.');
       setUrl('');
+      setRequesterName('');
+      setRequesterUrl('');
       setMessage('Added to the DJ queue.');
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.055, audioContext.currentTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.16);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.17);
+        oscillator.addEventListener('ended', () => void audioContext.close(), { once: true });
+      } catch {}
       await loadQueue();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not add that song.');
@@ -1255,7 +1278,15 @@ function DJRequestPage() {
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a YouTube song link. The DJ phone will play accepted requests from the shared queue.</p>
         </div>
         <form onSubmit={addSong} className="hv-surface mt-8 rounded-[2rem] p-5 md:p-7">
-          <label className="block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name
+              <input id="dj-request-name" type="text" required value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
+            </label>
+            <label className="block text-xs font-bold" htmlFor="dj-request-profile-url">Your URL <span className="font-normal text-muted-foreground">(optional)</span>
+              <input id="dj-request-profile-url" type="url" value={requesterUrl} onChange={(event) => setRequesterUrl(event.target.value)} placeholder="https://…" maxLength={500} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url-profile" />
+            </label>
+          </div>
+          <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
             <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'}</button>
@@ -1273,7 +1304,7 @@ function DJRequestPage() {
         <section className="mt-6">
           <div className="mb-4 flex items-end justify-between gap-3"><div><SectionEyebrow>UP NEXT</SectionEyebrow><h2 className="hv-display text-3xl">Queue</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px] text-muted-foreground">{upcoming.length}</span></div>
           {loading ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Loading queue…</div> : upcoming.length === 0 ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Be the first to add a song.</div> :
-            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube</p></div></div>)}</div>}
+            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube · Requested by {item.requesterName || 'Guest'}{item.requesterUrl ? ' · ' : ''}{item.requesterUrl && <a href={item.requesterUrl} target="_blank" rel="noreferrer" className="underline" onClick={(event) => event.stopPropagation()}>link</a>}</p></div></div>)}</div>}
         </section>
       </div>
     </main>
