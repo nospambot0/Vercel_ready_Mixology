@@ -1201,7 +1201,6 @@ function extractYouTubeId(raw: string): string | null {
 function DJRequestPage() {
   const [url, setUrl] = useState('');
   const [requesterName, setRequesterName] = useState('');
-  const [requesterUrl, setRequesterUrl] = useState('');
   const [items, setItems] = useState<DJItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -1235,13 +1234,12 @@ function DJRequestPage() {
       const response = await fetch('/api/dj/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed, requesterName: requesterName.trim(), requesterUrl: requesterUrl.trim() || undefined }),
+        body: JSON.stringify({ url: trimmed, requesterName: requesterName.trim() }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not add that song.');
       setUrl('');
       setRequesterName('');
-      setRequesterUrl('');
       setMessage('Added to the DJ queue.');
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -1282,9 +1280,7 @@ function DJRequestPage() {
             <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name <span className="font-normal text-muted-foreground">(optional)</span>
               <input id="dj-request-name" type="text" value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
             </label>
-            <label className="block text-xs font-bold" htmlFor="dj-request-profile-url">Your URL <span className="text-destructive">*</span>
-              <input id="dj-request-profile-url" type="url" required value={requesterUrl} onChange={(event) => setRequesterUrl(event.target.value)} placeholder="https://…" maxLength={500} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url-profile" />
-            </label>
+ 
           </div>
           <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
@@ -1304,7 +1300,7 @@ function DJRequestPage() {
         <section className="mt-6">
           <div className="mb-4 flex items-end justify-between gap-3"><div><SectionEyebrow>UP NEXT</SectionEyebrow><h2 className="hv-display text-3xl">Queue</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px] text-muted-foreground">{upcoming.length}</span></div>
           {loading ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Loading queue…</div> : upcoming.length === 0 ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Be the first to add a song.</div> :
-            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube · Requested by {item.requesterName || 'Guest'}{item.requesterUrl ? ' · ' : ''}{item.requesterUrl && <a href={item.requesterUrl} target="_blank" rel="noreferrer" className="underline" onClick={(event) => event.stopPropagation()}>link</a>}</p></div></div>)}</div>}
+            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube · Requested by {item.requesterName || 'Guest'}</p></div></div>)}</div>}
         </section>
       </div>
     </main>
