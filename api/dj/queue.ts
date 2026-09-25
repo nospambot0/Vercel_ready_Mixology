@@ -69,6 +69,17 @@ export default async function handler(req: any, res: any): Promise<void> {
     await ensureTable(sql);
     if (req.method === 'GET') {
       const rows = await sql`SELECT id, source, url, title, status, created_at AS "createdAt" FROM dj_queue WHERE status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
+      // Backfill titles for songs that were added before title lookup was enabled.
+      for (const row of rows as any[]) {
+        const fallback = titleFor(row.source as Source);
+        if (row.title === fallback) {
+          const title = await fetchTrackTitle(row.url, row.source as Source);
+          if (title !== fallback) {
+            row.title = title;
+            await sql`UPDATE dj_queue SET title = ${title} WHERE id = ${row.id}`;
+          }
+        }
+      }
       json(res, 200, { current: rows.find((row:any) => row.status === 'playing') ?? null, queue: rows.filter((row:any) => row.status === 'queued') });
       return;
     }
