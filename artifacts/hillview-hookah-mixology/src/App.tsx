@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, Radio, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
 import { CATALOG_STORAGE_KEY, readCatalog } from './logic/catalog';
@@ -1289,6 +1289,7 @@ function DJPage() {
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
 
@@ -1331,7 +1332,7 @@ function DJPage() {
         height: '100%',
         playerVars: { playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
         events: {
-          onReady: () => { playerReadyRef.current = true; },
+          onReady: () => { playerReadyRef.current = true; setPlayerReady(true); },
           onStateChange: (event: any) => {
             if (event.data === 0) void control('next');
           },
@@ -1362,7 +1363,7 @@ function DJPage() {
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
     playerRef.current.loadVideoById(videoId);
-  }, [current?.id]);
+  }, [current?.id, playerReady]);
 
   useEffect(() => () => {
     try { playerRef.current?.destroy(); } catch {}
