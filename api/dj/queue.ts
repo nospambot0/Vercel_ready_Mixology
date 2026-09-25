@@ -35,12 +35,27 @@ function titleFor() { return 'YouTube song request'; }
 
 function looksDisturbing(title: string): boolean {
   const blocked = [
+    // Graphic/disturbing content
     /\bgore\b/i, /\bgraphic\b/i, /\btorture\b/i, /\bkill(?:ing|ed)?\b/i,
     /\bmurder\b/i, /\bexecution\b/i, /\bdeath\s+video\b/i, /\bsnuff\b/i,
     /\bviolence\b/i, /\bbeheading\b/i, /\bdecapitat/i, /\bself[- ]harm\b/i,
     /\bsuicide\b/i, /\bwar\s+footage\b/i, /\bgraphic\s+accident\b/i,
-    /\bchoot\b/i, /\bbhosda\b/i, /\bmaghia\b/i, /\bbanda\b/i,
-    /\blauda\b/i, /\bgawk\b/i, /\bmoaning\b/i, /\bprank\b/i, /\bbia\b/i
+
+    // Volume 1: common explicit/profane/slur-like Hindi/Hinglish terms unsuitable for the public DJ queue.
+    /\bchoot(?:ad|iya|i)?\b/i, /\bchutiya\b/i, /\bchutiye\b/i,
+    /\bchut\b/i, /\bbhos(?:d|di|da|de)\b/i, /\bbhosda\b/i,
+    /\bbhosdi\b/i, /\bbhosdike\b/i, /\bmadarchod\b/i, /\bmc\b/i,
+    /\bbehenchod\b/i, /\bbc\b/i, /\bgand\b/i, /\bgandu\b/i,
+    /\bgandfat\b/i, /\blauda\b/i, /\blaude\b/i, /\blaudi\b/i,
+    /\blund\b/i, /\blundaa\b/i, /\bgaand\b/i, /\bharami\b/i,
+    /\bharamzada\b/i, /\bkamine\b/i, /\bkameena\b/i, /\bkamini\b/i,
+    /\bsaala\b/i, /\bsaali\b/i, /\bsaale\b/i, /\bchakka\b/i,
+    /\brandi\b/i, /\bwhore\b/i, /\bfuck\b/i, /\bfucker\b/i,
+    /\bshit\b/i, /\bbitch\b/i, /\basshole\b/i, /\bcunt\b/i,
+
+    // Previously requested flagged terms.
+    /\bbanda\b/i, /\bgawk\b/i, /\bmoaning\b/i, /\bprank\b/i, /\bbia\b/i,
+    /\bmaghia\b/i
   ];
   return blocked.some((pattern) => pattern.test(title));
 }
