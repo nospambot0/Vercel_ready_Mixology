@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 
-type Source = 'spotify' | 'youtube';
+type Source = 'youtube';
 
 function db() {
   const url = process.env.DATABASE_URL;
@@ -16,28 +16,34 @@ function json(res: any, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-function parseSource(raw: string): { source: Source; normalized: string } | null {
+function parseSource(raw: string): { source: Source; normalized: string; videoId: string } | null {
   try {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'open.spotify.com' || host === 'spotify.link') {
-      const parts = url.pathname.split('/').filter(Boolean);
-      if (parts.length === 2 && parts[0] === 'track' && /^[A-Za-z0-9]{10,40}$/.test(parts[1])) return { source: 'spotify', normalized: `https://open.spotify.com/track/${parts[1]}` };
-      return null;
-    }
-    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com' || host === 'youtu.be') {
-      let id = '';
-      if (host === 'youtu.be') id = url.pathname.slice(1).split('/')[0] ?? '';
-      else if (url.pathname.startsWith('/watch')) id = url.searchParams.get('v') ?? '';
+    let id = '';
+    if (host === 'youtu.be') id = url.pathname.slice(1).split('/')[0] ?? '';
+    else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (url.pathname.startsWith('/watch')) id = url.searchParams.get('v') ?? '';
       else if (url.pathname.startsWith('/shorts/')) id = url.pathname.split('/')[2] ?? '';
-      if (/^[A-Za-z0-9_-]{11}$/.test(id)) return { source: 'youtube', normalized: `https://www.youtube.com/watch?v=${id}` };
-      return null;
     }
+    if (/^[A-Za-z0-9_-]{11}$/.test(id)) return { source: 'youtube', normalized: `https://www.youtube.com/watch?v=${id}`, videoId: id };
     return null;
   } catch { return null; }
 }
 
-function titleFor(source: Source) { return source === 'spotify' ? 'Spotify track request' : 'YouTube song request'; }
+function titleFor() { return 'YouTube song request'; }
+
+function looksDisturbing(title: string): boolean {
+  const blocked = [
+    /\bgore\b/i, /\bgraphic\b/i, /\btorture\b/i, /\bkill(?:ing|ed)?\b/i,
+    /\bmurder\b/i, /\bexecution\b/i, /\bdeath\s+video\b/i, /\bsnuff\b/i,
+    /\bviolence\b/i, /\bbeheading\b/i, /\bdecapitat/i, /\bself[- ]harm\b/i,
+    /\bsuicide\b/i, /\bwar\s+footage\b/i, /\bgraphic\s+accident\b/i
+  ];
+  return blocked.some((pattern) => pattern.test(title));
+}
+
+
 
 async function fetchTrackTitle(url: string, source: Source): Promise<string> {
   const controller = new AbortController();
@@ -86,15 +92,16 @@ export default async function handler(req: any, res: any): Promise<void> {
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {});
       const raw = typeof body.url === 'string' ? body.url.trim() : '';
-      if (!raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid Spotify track or YouTube video link.' }); return; }
+      if (!raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid YouTube song link.' }); return; }
       const parsed = parseSource(raw);
-      if (!parsed) { json(res, 400, { error: 'Only Spotify track links and YouTube video links are accepted.' }); return; }
+      if (!parsed) { json(res, 400, { error: 'Only YouTube video links are accepted.' }); return; }
       const countRows = await sql`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')`;
       if ((countRows[0]?.count ?? 0) >= 100) { json(res, 429, { error: 'The DJ queue is full. Please try again later.' }); return; }
       const duplicate = await sql`SELECT id FROM dj_queue WHERE url = ${parsed.normalized} AND status IN ('queued','playing') LIMIT 1`;
       if (duplicate.length) { json(res, 409, { error: 'That song is already in the queue.' }); return; }
       const id = randomUUID();
       const title = await fetchTrackTitle(parsed.normalized, parsed.source);
+      if (looksDisturbing(title)) { json(res, 400, { error: 'That video does not appear to be suitable for the DJ queue.' }); return; }
       await sql`INSERT INTO dj_queue (id, source, url, title, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, 'queued', NOW())`;
       json(res, 201, { added: true, id });
       return;
