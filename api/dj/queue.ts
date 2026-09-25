@@ -46,7 +46,7 @@ async function fetchTrackTitle(url: string, source: Source): Promise<string> {
     const endpoint = source === 'spotify'
       ? `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
       : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
-    const response = await fetch(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    const response: any = await fetch(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
     if (!response.ok) return titleFor(source);
     const data = await response.json() as { title?: unknown };
     const title = typeof data.title === 'string' ? data.title.trim() : '';
