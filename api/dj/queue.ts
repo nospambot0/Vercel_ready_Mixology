@@ -80,7 +80,9 @@ async function fetchTrackTitle(url: string, source: Source): Promise<string> {
 }
 
 async function ensureTable(sql: any) {
-  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT 'Guest', requester_url TEXT, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
+  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_name TEXT NOT NULL DEFAULT 'Guest'`;
+  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_url TEXT`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
 }
 
@@ -89,7 +91,7 @@ export default async function handler(req: any, res: any): Promise<void> {
     const sql = db();
     await ensureTable(sql);
     if (req.method === 'GET') {
-      const rows = await sql`SELECT id, source, url, title, status, created_at AS "createdAt" FROM dj_queue WHERE source = 'youtube' AND status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
+      const rows = await sql`SELECT id, source, url, title, requester_name AS "requesterName", requester_url AS "requesterUrl", status, created_at AS "createdAt" FROM dj_queue WHERE source = 'youtube' AND status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
       // Backfill titles for songs that were added before title lookup was enabled.
       for (const row of rows as any[]) {
         const fallback = titleFor();
@@ -107,7 +109,20 @@ export default async function handler(req: any, res: any): Promise<void> {
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {});
       const raw = typeof body.url === 'string' ? body.url.trim() : '';
-      if (!raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid YouTube song link.' }); return; }
+      const requesterName = typeof body.requesterName === 'string' ? body.requesterName.trim().slice(0, 80) : '';
+      const requesterUrlRaw = typeof body.requesterUrl === 'string' ? body.requesterUrl.trim().slice(0, 500) : '';
+      let requesterUrl: string | null = null;
+      if (requesterUrlRaw) {
+        try {
+          const parsedRequesterUrl = new URL(requesterUrlRaw);
+          if (parsedRequesterUrl.protocol !== 'http:' && parsedRequesterUrl.protocol !== 'https:') throw new Error();
+          requesterUrl = parsedRequesterUrl.toString();
+        } catch {
+          json(res, 400, { error: 'Please enter a valid http(s) URL for your optional link.' });
+          return;
+        }
+      }
+      if (!requesterName || !raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid YouTube song link.' }); return; }
       const parsed = parseSource(raw);
       if (!parsed) { json(res, 400, { error: 'Only YouTube video links are accepted.' }); return; }
       const countRows = await sql`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')`;
@@ -117,7 +132,7 @@ export default async function handler(req: any, res: any): Promise<void> {
       const id = randomUUID();
       const title = await fetchTrackTitle(parsed.normalized, parsed.source);
       if (looksDisturbing(title)) { json(res, 400, { error: 'That video does not appear to be suitable for the DJ queue.' }); return; }
-      await sql`INSERT INTO dj_queue (id, source, url, title, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, 'queued', NOW())`;
+      await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, ${requesterName}, ${requesterUrl}, 'queued', NOW())`;
       json(res, 201, { added: true, id });
       return;
     }
