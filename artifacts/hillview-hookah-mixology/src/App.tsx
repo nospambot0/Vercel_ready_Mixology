@@ -1184,6 +1184,34 @@ function DJSourceLabel() {
   return 'YouTube';
 }
 
+function playQueueChime(audioContextRef?: { current: AudioContext | null }) {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = audioContextRef?.current ?? new AudioContextClass();
+    if (audioContextRef && !audioContextRef.current) audioContextRef.current = context;
+    const start = () => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(660, context.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.17);
+    };
+    if (context.state === 'suspended') {
+      void context.resume().then(start).catch(() => undefined);
+    } else {
+      start();
+    }
+  } catch {}
+}
+
 function extractYouTubeId(raw: string): string | null {
   try {
     const url = new URL(raw);
@@ -1205,26 +1233,6 @@ function DJRequestPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
-
-  const playQueueChime = () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.045, audioContext.currentTime + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.16);
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.17);
-      oscillator.addEventListener('ended', () => void audioContext.close(), { once: true });
-    } catch {}
-  };
 
   const loadQueue = async () => {
     try {
@@ -1320,23 +1328,35 @@ function DJPage() {
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
-  const lastQueueCountRef = useRef<number | null>(null);
+  const lastQueueIdsRef = useRef<Set<string> | null>(null);
+  const queuePollInFlightRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
 
   const loadQueue = async () => {
+    if (queuePollInFlightRef.current) return;
+    queuePollInFlightRef.current = true;
     try {
-      const response = await fetch('/api/dj/queue', { cache: 'no-store' });
+      const response = await fetch(`/api/dj/queue?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load DJ queue.');
-      setCurrent(data.current ?? null);
-      const nextQueue = data.queue ?? [];
-      if (lastQueueCountRef.current !== null && nextQueue.length > lastQueueCountRef.current) playQueueChime();
-      lastQueueCountRef.current = nextQueue.length;
+      const nextCurrent = data.current ?? null;
+      const nextQueue = Array.isArray(data.queue) ? data.queue : [];
+      const previousIds = lastQueueIdsRef.current;
+      if (previousIds) {
+        const hasNewRequest = nextQueue.some((item: DJItem) => !previousIds.has(item.id));
+        if (hasNewRequest) playQueueChime(audioContextRef);
+      }
+      lastQueueIdsRef.current = new Set(nextQueue.map((item: DJItem) => item.id));
+      setCurrent(nextCurrent);
       setQueue(nextQueue);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not load DJ queue.'); }
-    finally { setLoading(false); }
+    finally {
+      queuePollInFlightRef.current = false;
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -1352,8 +1372,11 @@ function DJPage() {
       const response = await fetch('/api/dj/control', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action, id }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'DJ action failed.');
-      setCurrent(data.current ?? null);
-      setQueue(data.queue ?? []);
+      const nextCurrent = data.current ?? null;
+      const nextQueue = Array.isArray(data.queue) ? data.queue : [];
+      lastQueueIdsRef.current = new Set(nextQueue.map((item: DJItem) => item.id));
+      setCurrent(nextCurrent);
+      setQueue(nextQueue);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'DJ action failed.'); }
     finally { setWorking(false); }
   };
@@ -1402,6 +1425,7 @@ function DJPage() {
 
   useEffect(() => () => {
     try { playerRef.current?.destroy(); } catch {}
+    try { void audioContextRef.current?.close(); } catch {}
   }, []);
 
   const copyRequestLink = async () => {
@@ -1425,7 +1449,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button></div>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
