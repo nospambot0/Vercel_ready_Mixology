@@ -53,12 +53,12 @@ async function fetchTrackTitle(url: string, source: Source): Promise<string> {
       ? `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
       : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
     const response: any = await fetch(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
-    if (!response.ok) return titleFor(source);
+    if (!response.ok) return titleFor();
     const data = await response.json() as { title?: unknown };
     const title = typeof data.title === 'string' ? data.title.trim() : '';
-    return title.slice(0, 300) || titleFor(source);
+    return title.slice(0, 300) || titleFor();
   } catch {
-    return titleFor(source);
+    return titleFor();
   } finally {
     clearTimeout(timeout);
   }
@@ -77,7 +77,7 @@ export default async function handler(req: any, res: any): Promise<void> {
       const rows = await sql`SELECT id, source, url, title, status, created_at AS "createdAt" FROM dj_queue WHERE status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
       // Backfill titles for songs that were added before title lookup was enabled.
       for (const row of rows as any[]) {
-        const fallback = titleFor(row.source as Source);
+        const fallback = titleFor();
         if (row.title === fallback) {
           const title = await fetchTrackTitle(row.url, row.source as Source);
           if (title !== fallback) {
