@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube, Disc3 } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
 import { CATALOG_STORAGE_KEY, readCatalog } from './logic/catalog';
@@ -152,11 +152,12 @@ function BottomNav({ choice }: { choice: Choice | null }) {
     { href: '/', label: 'Home', icon: HomeIcon },
     { href: '/find', label: 'Find My Hookah', icon: Sparkles },
     { href: '/choice', label: 'My Choice', icon: Heart, count: choice ? '1' : undefined },
+    { href: '/dj-request', label: 'DJ', icon: Disc3 },
   ];
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/90 px-3 pb-[max(.8rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:bottom-5 md:left-1/2 md:right-auto md:w-[480px] md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-2xl md:shadow-primary/10" aria-label="Primary navigation">
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-1">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
           {items.map(({ href, label, icon: Icon, count }, index) => {
             const active = location === href || (href === '/find' && location.startsWith('/find'));
             return (
