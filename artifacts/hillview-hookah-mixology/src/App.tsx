@@ -1279,11 +1279,11 @@ function DJRequestPage() {
         </div>
         <form onSubmit={addSong} className="hv-surface mt-8 rounded-[2rem] p-5 md:p-7">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name
-              <input id="dj-request-name" type="text" required value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
+            <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name <span className="font-normal text-muted-foreground">(optional)</span>
+              <input id="dj-request-name" type="text" value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
             </label>
-            <label className="block text-xs font-bold" htmlFor="dj-request-profile-url">Your URL <span className="font-normal text-muted-foreground">(optional)</span>
-              <input id="dj-request-profile-url" type="url" value={requesterUrl} onChange={(event) => setRequesterUrl(event.target.value)} placeholder="https://…" maxLength={500} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url-profile" />
+            <label className="block text-xs font-bold" htmlFor="dj-request-profile-url">Your URL <span className="text-destructive">*</span>
+              <input id="dj-request-profile-url" type="url" required value={requesterUrl} onChange={(event) => setRequesterUrl(event.target.value)} placeholder="https://…" maxLength={500} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url-profile" />
             </label>
           </div>
           <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
