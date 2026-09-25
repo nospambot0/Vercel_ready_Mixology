@@ -205,7 +205,12 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
 }
 
 export function handleLogout(_req: RequestLike, res: ResponseLike): void {
-  clearCookie(res, SESSION_COOKIE);
-  clearCookie(res, OTP_COOKIE);
+  // A response can carry multiple Set-Cookie headers. Calling setHeader twice
+  // replaces the first one, so clear both auth cookies in a single header array.
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', [
+    SESSION_COOKIE + '=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' + secure,
+    OTP_COOKIE + '=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' + secure,
+  ]);
   sendJson(res, 200, { authenticated: false });
 }
