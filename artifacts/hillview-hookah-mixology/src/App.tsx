@@ -1446,6 +1446,10 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
 
 function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: Catalog) => void }) {
   const [location] = useLocation();
+
+  // TEMPORARY TEST BYPASS: clicking anywhere on the staff login screen unlocks the UI.
+  // This is intentionally client-side only and does not bypass the server API auth.
+  const TEMP_TEST_BYPASS = true;
   const [status, setStatus] = useState<'checking' | 'locked' | 'unlocked'>('checking');
   const [method, setMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -1563,7 +1567,12 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
   }
 
   return (
-    <main className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28">
+    <main
+      className="hv-shell hv-page-in flex min-h-[65vh] items-center justify-center pb-28"
+      onClick={() => {
+        if (TEMP_TEST_BYPASS) setStatus('unlocked');
+      }}
+    >
       <div className="w-full max-w-md">
         <div className="mb-3 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
           <button type="button" onClick={() => { setMethod('password'); setError(''); }} className={`min-h-10 rounded-xl text-xs font-bold ${method === 'password' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`} data-testid="button-manage-password-tab">Password</button>
