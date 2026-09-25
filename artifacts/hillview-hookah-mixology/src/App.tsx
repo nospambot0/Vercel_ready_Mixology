@@ -1206,6 +1206,26 @@ function DJRequestPage() {
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
 
+  const playQueueChime = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(660, audioContext.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.045, audioContext.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.16);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.17);
+      oscillator.addEventListener('ended', () => void audioContext.close(), { once: true });
+    } catch {}
+  };
+
   const loadQueue = async () => {
     try {
       const response = await fetch('/api/dj/queue', { cache: 'no-store' });
@@ -1300,6 +1320,7 @@ function DJPage() {
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
+  const lastQueueCountRef = useRef<number | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
@@ -1310,7 +1331,10 @@ function DJPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load DJ queue.');
       setCurrent(data.current ?? null);
-      setQueue(data.queue ?? []);
+      const nextQueue = data.queue ?? [];
+      if (lastQueueCountRef.current !== null && nextQueue.length > lastQueueCountRef.current) playQueueChime();
+      lastQueueCountRef.current = nextQueue.length;
+      setQueue(nextQueue);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not load DJ queue.'); }
     finally { setLoading(false); }
   };
