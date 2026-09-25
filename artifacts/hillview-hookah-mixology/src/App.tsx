@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, Radio, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
@@ -1161,7 +1161,7 @@ function PosPage() {
 }
 
 
-type DJSource = 'spotify' | 'youtube';
+type DJSource = 'youtube';
 type DJStatus = 'queued' | 'playing' | 'played';
 
 type DJItem = {
@@ -1173,12 +1173,26 @@ type DJItem = {
   createdAt: string;
 };
 
-function DJSourceIcon({ source, size = 16 }: { source: DJSource; size?: number }) {
-  return source === 'youtube' ? <Youtube size={size} /> : <Radio size={size} />;
+function DJSourceIcon({ size = 16 }: { source: DJSource; size?: number }) {
+  return <Youtube size={size} />;
 }
 
-function DJSourceLabel({ source }: { source: DJSource }) {
-  return source === 'youtube' ? 'YouTube' : 'Spotify';
+function DJSourceLabel() {
+  return 'YouTube';
+}
+
+function extractYouTubeId(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let id = '';
+    if (host === 'youtu.be') id = url.pathname.slice(1).split('/')[0] ?? '';
+    else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (url.pathname.startsWith('/watch')) id = url.searchParams.get('v') ?? '';
+      else if (url.pathname.startsWith('/shorts/')) id = url.pathname.split('/')[2] ?? '';
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+  } catch { return null; }
 }
 
 function DJRequestPage() {
@@ -1193,11 +1207,7 @@ function DJRequestPage() {
       const response = await fetch('/api/dj/queue', { cache: 'no-store' });
       const data = await response.json();
       if (response.ok) setItems([...(data.current ? [data.current] : []), ...(data.queue ?? [])]);
-    } catch {
-      // Keep the last visible queue.
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -1211,6 +1221,10 @@ function DJRequestPage() {
     setMessage('');
     const trimmed = url.trim();
     if (!trimmed) return;
+    if (!extractYouTubeId(trimmed)) {
+      setMessage('Please paste a valid YouTube song link.');
+      return;
+    }
     setAdding(true);
     try {
       const response = await fetch('/api/dj/queue', {
@@ -1225,9 +1239,7 @@ function DJRequestPage() {
       await loadQueue();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not add that song.');
-    } finally {
-      setAdding(false);
-    }
+    } finally { setAdding(false); }
   };
 
   const current = items.find((item) => item.status === 'playing');
@@ -1239,16 +1251,16 @@ function DJRequestPage() {
         <div className="pt-4 md:pt-10">
           <SectionEyebrow>REQUEST A SONG</SectionEyebrow>
           <h1 className="hv-display text-5xl leading-tight md:text-7xl">DJ Queue</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a Spotify or YouTube song link. The DJ phone will see your request in the shared queue.</p>
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a YouTube song link. The DJ phone will play accepted requests from the shared queue.</p>
         </div>
         <form onSubmit={addSong} className="hv-surface mt-8 rounded-[2rem] p-5 md:p-7">
-          <label className="block text-xs font-bold" htmlFor="dj-request-url">Spotify or YouTube link</label>
+          <label className="block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste song link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
+            <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
             <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'}</button>
           </div>
           {message && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold" role="status">{message}</p>}
-          <p className="mt-3 text-[10px] leading-5 text-muted-foreground">Only Spotify track links and YouTube video links are accepted.</p>
+          <p className="mt-3 text-[10px] leading-5 text-muted-foreground">Only YouTube video links are accepted. Songs marked age-restricted by YouTube may be accepted; obviously disturbing or graphic videos are filtered.</p>
         </form>
         <section className="mt-6 hv-surface rounded-[2rem] p-5 md:p-7">
           <div className="flex items-center justify-between gap-3">
@@ -1260,13 +1272,7 @@ function DJRequestPage() {
         <section className="mt-6">
           <div className="mb-4 flex items-end justify-between gap-3"><div><SectionEyebrow>UP NEXT</SectionEyebrow><h2 className="hv-display text-3xl">Queue</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px] text-muted-foreground">{upcoming.length}</span></div>
           {loading ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Loading queue…</div> : upcoming.length === 0 ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Be the first to add a song.</div> :
-            <div className="space-y-2">{upcoming.map((item, index) => (
-              <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3">
-                <span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div>
-                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground"><DJSourceLabel source={item.source} /></p></div>
-              </div>
-            ))}</div>}
+            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube</p></div></div>)}</div>}
         </section>
       </div>
     </main>
@@ -1283,6 +1289,8 @@ function DJPage() {
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
+  const playerRef = useRef<any>(null);
+  const playerReadyRef = useRef(false);
 
   const loadQueue = async () => {
     try {
@@ -1291,11 +1299,8 @@ function DJPage() {
       if (!response.ok) throw new Error(data.error || 'Could not load DJ queue.');
       setCurrent(data.current ?? null);
       setQueue(data.queue ?? []);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not load DJ queue.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not load DJ queue.'); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -1313,21 +1318,59 @@ function DJPage() {
       if (!response.ok) throw new Error(data.error || 'DJ action failed.');
       setCurrent(data.current ?? null);
       setQueue(data.queue ?? []);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'DJ action failed.');
-    } finally {
-      setWorking(false);
-    }
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'DJ action failed.'); }
+    finally { setWorking(false); }
   };
 
-  const copyRequestLink = async () => {
-    try {
-      await navigator.clipboard.writeText(requestUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setNotice('Copy is unavailable on this device. Use the QR code instead.');
+  useEffect(() => {
+    let cancelled = false;
+    const setup = () => {
+      if (cancelled || !(window as any).YT || playerRef.current) return;
+      playerRef.current = new (window as any).YT.Player('dj-youtube-player', {
+        width: '100%',
+        height: '100%',
+        playerVars: { playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
+        events: {
+          onReady: () => { playerReadyRef.current = true; },
+          onStateChange: (event: any) => {
+            if (event.data === 0) void control('next');
+          },
+          onError: (event: any) => {
+            if ([100, 101, 150].includes(event.data)) {
+              setNotice('This YouTube video cannot be played in the embedded player. Skipping it.');
+              void control('next');
+            }
+          }
+        }
+      });
+    };
+    if ((window as any).YT) setup();
+    else {
+      const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (!existing) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(script);
+      }
+      (window as any).onYouTubeIframeAPIReady = setup;
     }
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!current || !playerReadyRef.current || !playerRef.current) return;
+    const videoId = extractYouTubeId(current.url);
+    if (!videoId) return;
+    playerRef.current.loadVideoById(videoId);
+  }, [current?.id]);
+
+  useEffect(() => () => {
+    try { playerRef.current?.destroy(); } catch {}
+  }, []);
+
+  const copyRequestLink = async () => {
+    try { await navigator.clipboard.writeText(requestUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
+    catch { setNotice('Copy is unavailable on this device. Use the QR code instead.'); }
   };
 
   return (
@@ -1335,7 +1378,7 @@ function DJPage() {
       <div className="mx-auto max-w-6xl">
         <div className="pt-4 md:pt-10">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div><SectionEyebrow>STAFF CONTROL / DJ</SectionEyebrow><h1 className="hv-display text-5xl leading-tight md:text-7xl">Mixology DJ</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">This is the only DJ control screen. Keep this page open on the phone connected to the speaker.</p></div>
+            <div><SectionEyebrow>STAFF CONTROL / DJ</SectionEyebrow><h1 className="hv-display text-5xl leading-tight md:text-7xl">Mixology DJ</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Keep this page open on the phone connected to the speaker. YouTube songs play inside the browser.</p></div>
             <div className="flex gap-2"><button type="button" onClick={() => setShowQr(true)} className="flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-xs font-bold hover:bg-muted"><QrCode size={16} /> Request QR</button><Link href="/manage" className="hidden min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-xs font-bold hover:bg-muted md:inline-flex"><ArrowLeft size={15} /> Dashboard</Link></div>
           </div>
         </div>
@@ -1343,27 +1386,22 @@ function DJPage() {
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{current?.title || 'No song selected'}</h2></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
-            {current ? <><div className="mt-6 rounded-3xl bg-primary p-5 text-primary-foreground"><div className="flex items-center gap-3"><DJSourceIcon source={current.source} size={18} /><span className="text-xs font-bold"><DJSourceLabel source={current.source} /></span></div><p className="mt-4 text-xs leading-5 text-primary-foreground/70">Playback is intentionally controlled from this staff phone. Open the selected source on this device only.</p><a href={current.url} target="_blank" rel="noopener" className="mt-5 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-secondary px-4 text-xs font-black text-secondary-foreground"><ExternalLink size={15} /> Open selected source</a></div><div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><SkipForward size={17} /> Next song</button><button type="button" disabled={working} onClick={() => void control('stop')} className="min-h-12 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Stop / Clear current</button></div></> :
-              <div className="mt-6 rounded-3xl border border-dashed border-border p-8 text-center"><ListMusic className="mx-auto text-muted-foreground" size={30} /><p className="mt-3 text-sm font-semibold">The queue is waiting.</p><p className="mt-1 text-xs text-muted-foreground">Choose a queued song below to make it current.</p></div>}
+            <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
+            {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
+            {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button></div>
+            {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>SHARED QUEUE</SectionEyebrow><h2 className="hv-display text-3xl">Up next</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{queue.length}</span></div>
             <div className="mt-5 space-y-2">
               {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p> : queue.length === 0 ? <p className="rounded-2xl border border-dashed border-border p-7 text-center text-sm text-muted-foreground">No requests yet.</p> :
-                queue.map((item, index) => (
-                  <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/40 p-3">
-                    <span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={16} /></div>
-                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground"><DJSourceLabel source={item.source} /></p></div>
-                    <button type="button" disabled={working} onClick={() => void control('play', item.id)} className="flex h-9 items-center gap-1 rounded-lg bg-secondary px-3 text-[10px] font-black text-secondary-foreground disabled:opacity-50"><Play size={13} /> Play</button>
-                    <button type="button" disabled={working} onClick={() => void control('remove', item.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50" aria-label={`Remove ${item.title}`}><Trash2 size={14} /></button>
-                  </div>
-                ))}
+                queue.map((item, index) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/40 p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><Youtube size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube</p></div><button type="button" disabled={working} onClick={() => void control('play', item.id)} className="flex h-9 items-center gap-1 rounded-lg bg-secondary px-3 text-[10px] font-black text-secondary-foreground disabled:opacity-50"><Play size={13} /> Play</button><button type="button" disabled={working} onClick={() => void control('remove', item.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50" aria-label={`Remove ${item.title}`}><Trash2 size={14} /></button></div>)}
             </div>
           </section>
         </div>
       </div>
-      {showQr && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setShowQr(false)}><div className="w-full max-w-sm rounded-[2rem] bg-background p-6 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><div className="text-left"><SectionEyebrow>SONG REQUESTS</SectionEyebrow><h2 className="hv-display text-3xl">Scan to request</h2></div><button type="button" onClick={() => setShowQr(false)} className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X size={18} /></button></div><div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-4"><img src={qrUrl} alt="QR code for DJ song requests" className="h-60 w-60" /></div><p className="mt-4 text-xs leading-5 text-muted-foreground">Customers can scan this code to add Spotify or YouTube links. They cannot control playback.</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => void copyRequestLink()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-xs font-bold"><Copy size={14} /> {copied ? 'Copied' : 'Copy link'}</button><button type="button" onClick={() => setShowQr(false)} className="min-h-11 flex-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground">Done</button></div></div></div>}
+      {showQr && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setShowQr(false)}><div className="w-full max-w-sm rounded-[2rem] bg-background p-6 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><div className="text-left"><SectionEyebrow>SONG REQUESTS</SectionEyebrow><h2 className="hv-display text-3xl">Scan to request</h2></div><button type="button" onClick={() => setShowQr(false)} className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X size={18} /></button></div><div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-4"><img src={qrUrl} alt="QR code for DJ song requests" className="h-60 w-60" /></div><p className="mt-4 text-xs leading-5 text-muted-foreground">Customers can scan this code to add YouTube song links. They cannot control playback.</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => void copyRequestLink()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-xs font-bold"><Copy size={14} /> {copied ? 'Copied' : 'Copy link'}</button><button type="button" onClick={() => setShowQr(false)} className="min-h-11 flex-1 rounded-xl bg-primary text-xs font-bold text-primary-foreground">Done</button></div></div></div>}
     </main>
   );
 }
