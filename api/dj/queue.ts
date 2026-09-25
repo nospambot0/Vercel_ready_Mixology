@@ -122,7 +122,7 @@ export default async function handler(req: any, res: any): Promise<void> {
           return;
         }
       }
-      if (!requesterName || !raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid YouTube song link.' }); return; }
+      if (!requesterUrl || !raw || raw.length > 500) { json(res, 400, { error: 'Paste a valid YouTube song link.' }); return; }
       const parsed = parseSource(raw);
       if (!parsed) { json(res, 400, { error: 'Only YouTube video links are accepted.' }); return; }
       const countRows = await sql`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')`;
