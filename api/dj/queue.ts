@@ -38,7 +38,9 @@ function looksDisturbing(title: string): boolean {
     /\bgore\b/i, /\bgraphic\b/i, /\btorture\b/i, /\bkill(?:ing|ed)?\b/i,
     /\bmurder\b/i, /\bexecution\b/i, /\bdeath\s+video\b/i, /\bsnuff\b/i,
     /\bviolence\b/i, /\bbeheading\b/i, /\bdecapitat/i, /\bself[- ]harm\b/i,
-    /\bsuicide\b/i, /\bwar\s+footage\b/i, /\bgraphic\s+accident\b/i
+    /\bsuicide\b/i, /\bwar\s+footage\b/i, /\bgraphic\s+accident\b/i,
+    /\bchoot\b/i, /\bbhosda\b/i, /\bmaghia\b/i, /\bbanda\b/i,
+    /\blauda\b/i, /\bgawk\b/i, /\bmoaning\b/i, /\bprank\b/i, /\bbia\b/i
   ];
   return blocked.some((pattern) => pattern.test(title));
 }
