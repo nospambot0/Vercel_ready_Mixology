@@ -49,9 +49,7 @@ async function fetchTrackTitle(url: string, source: Source): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3500);
   try {
-    const endpoint = source === 'spotify'
-      ? `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
-      : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
     const response: any = await fetch(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
     if (!response.ok) return titleFor();
     const data = await response.json() as { title?: unknown };
@@ -74,7 +72,7 @@ export default async function handler(req: any, res: any): Promise<void> {
     const sql = db();
     await ensureTable(sql);
     if (req.method === 'GET') {
-      const rows = await sql`SELECT id, source, url, title, status, created_at AS "createdAt" FROM dj_queue WHERE status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
+      const rows = await sql`SELECT id, source, url, title, status, created_at AS "createdAt" FROM dj_queue WHERE source = 'youtube' AND status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
       // Backfill titles for songs that were added before title lookup was enabled.
       for (const row of rows as any[]) {
         const fallback = titleFor();
