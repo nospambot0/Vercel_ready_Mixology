@@ -39,6 +39,25 @@ function parseSource(raw: string): { source: Source; normalized: string } | null
 
 function titleFor(source: Source) { return source === 'spotify' ? 'Spotify track request' : 'YouTube song request'; }
 
+async function fetchTrackTitle(url: string, source: Source): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+  try {
+    const endpoint = source === 'spotify'
+      ? `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
+      : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    const response = await fetch(endpoint, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    if (!response.ok) return titleFor(source);
+    const data = await response.json() as { title?: unknown };
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+    return title.slice(0, 300) || titleFor(source);
+  } catch {
+    return titleFor(source);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function ensureTable(sql: any) {
   await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
@@ -64,7 +83,8 @@ export default async function handler(req: any, res: any): Promise<void> {
       const duplicate = await sql`SELECT id FROM dj_queue WHERE url = ${parsed.normalized} AND status IN ('queued','playing') LIMIT 1`;
       if (duplicate.length) { json(res, 409, { error: 'That song is already in the queue.' }); return; }
       const id = randomUUID();
-      await sql`INSERT INTO dj_queue (id, source, url, title, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${titleFor(parsed.source)}, 'queued', NOW())`;
+      const title = await fetchTrackTitle(parsed.normalized, parsed.source);
+      await sql`INSERT INTO dj_queue (id, source, url, title, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, 'queued', NOW())`;
       json(res, 201, { added: true, id });
       return;
     }
