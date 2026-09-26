@@ -6,7 +6,8 @@ const SESSION_VALUE = 'authenticated';
 const SESSION_MAX_AGE = 8 * 60 * 60;
 const OTP_MAX_AGE = 10 * 60;
 const OTP_RESEND_COOLDOWN = 60;
-const STAFF_OTP_EMAIL = 'r.rakeshdas401@gmail.com';
+const STAFF_OTP_EMAILS = ['r.rakeshdas401@gmail.com', 'ekalabyapradhan70@gmail.com'] as const;
+const DEFAULT_STAFF_OTP_EMAIL = STAFF_OTP_EMAILS[0];
 const PASSWORD_SESSION_VALUE = 'authenticated';
 
 type RequestLike = {
@@ -119,6 +120,14 @@ function maskEmail(email: string): string {
   return `${visible}${'*'.repeat(Math.max(1, local.length - visible.length))}@${domain}`;
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isAuthorizedStaffEmail(email: string): boolean {
+  return STAFF_OTP_EMAILS.includes(normalizeEmail(email) as (typeof STAFF_OTP_EMAILS)[number]);
+}
+
 function isValidPassword(password: string): boolean {
   const configured = process.env.MANAGE_PASSWORD;
   return Boolean(configured && password && safeEqual(password, configured));
@@ -169,7 +178,12 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
   }
 
   if (action === 'send') {
-    const email = STAFF_OTP_EMAIL;
+    const requestedEmail = typeof body.email === 'string' ? normalizeEmail(body.email) : DEFAULT_STAFF_OTP_EMAIL;
+    if (!isAuthorizedStaffEmail(requestedEmail)) {
+      sendJson(res, 403, { message: 'That email is not authorized for Mixology PRO staff access.' });
+      return;
+    }
+    const email = requestedEmail;
     const existing = readOtpToken(cookies[OTP_COOKIE]);
     if (existing && Date.now() - existing.issuedAt < OTP_RESEND_COOLDOWN * 1000 && existing.email === email) {
       sendJson(res, 429, { message: 'Please wait a minute before requesting another code.' });
@@ -189,11 +203,11 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
     return;
   }
 
-  const email = STAFF_OTP_EMAIL;
+  const requestedEmail = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
   const code = typeof body.code === 'string' ? body.code.trim() : '';
   const otp = readOtpToken(cookies[OTP_COOKIE]);
 
-  if (!otp || !email || otp.email !== email || !/^\d{6}$/.test(code) || !safeEqual(otp.code, code)) {
+  if (!requestedEmail || !isAuthorizedStaffEmail(requestedEmail) || !otp || otp.email !== requestedEmail || !/^\d{6}$/.test(code) || !safeEqual(otp.code, code)) {
     clearCookie(res, OTP_COOKIE);
     sendJson(res, 401, { message: 'That verification code is invalid or expired.' });
     return;
