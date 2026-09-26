@@ -374,40 +374,39 @@ function MaintenanceHome() {
 
   return (
     <main className="relative flex min-h-[calc(100vh-6rem)] items-center justify-center overflow-hidden px-4 pb-32">
-      <div className="absolute inset-0 overflow-hidden bg-[#090909]" aria-hidden="true">
-        <div className="absolute inset-[-8%] grid grid-cols-2 gap-2 opacity-55 sm:grid-cols-3 md:grid-cols-4">
+      <div className="absolute inset-0 overflow-hidden bg-[#111]" aria-hidden="true">
+        <div className="absolute inset-[-7%] grid grid-cols-2 gap-3 opacity-95 sm:grid-cols-3 md:grid-cols-4">
           {hookahBrands.map((brand, index) => (
             <div
               key={brand}
-              className="relative min-h-40 overflow-hidden border border-white/10 bg-black"
-              style={{ transform: `rotate(${index % 2 === 0 ? '-2deg' : '2deg'}) scale(1.06)` }}
+              className="relative min-h-44 overflow-hidden rounded-2xl border border-white/15 bg-neutral-900 shadow-2xl"
+              style={{
+                transform: `rotate(${index % 2 === 0 ? '-1.5deg' : '1.5deg'}) scale(1.04)`,
+                backgroundImage: `url(${HOME_INTRO_HOOKAH})`,
+                backgroundSize: 'cover',
+                backgroundPosition: index % 2 === 0 ? 'center' : '45% center',
+              }}
             >
-              <img
-                src={HOME_INTRO_HOOKAH}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover grayscale"
-                style={{ opacity: index % 3 === 0 ? 0.68 : 0.48 }}
-              />
-              <div className="absolute inset-0 bg-black/45" />
+              <div className="absolute inset-0 bg-black/20" />
               <div className="absolute inset-0 flex items-center justify-center p-3">
-                <span className="hv-display text-center text-lg tracking-[0.08em] text-white/90 drop-shadow-2xl sm:text-xl">
+                <span className="hv-display text-center text-xl font-bold tracking-[0.08em] text-white drop-shadow-[0_3px_12px_rgba(0,0,0,.95)] sm:text-2xl">
                   {brand}
                 </span>
               </div>
             </div>
           ))}
         </div>
-        <div className="absolute inset-0 bg-black/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/65 to-black/85" />
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/30 to-black/55" />
       </div>
 
-      <section className="relative z-10 w-full max-w-xl rounded-[2rem] border border-white/10 bg-primary/90 px-7 py-12 text-center text-primary-foreground shadow-2xl shadow-black/40 backdrop-blur-sm md:px-12 md:py-16">
+      <section className="relative z-10 w-full max-w-xl rounded-[2rem] border border-white/15 bg-black/70 px-7 py-12 text-center text-white shadow-2xl shadow-black/50 backdrop-blur-md md:px-12 md:py-16">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
           <Settings2 size={28} />
         </div>
         <SectionEyebrow>MIXOLOGY PRO / MAINTENANCE</SectionEyebrow>
         <h1 className="hv-display text-5xl md:text-6xl">Under Maintenance</h1>
-        <p className="mx-auto mt-5 max-w-md text-sm leading-7 text-primary-foreground/70">
+        <p className="mx-auto mt-5 max-w-md text-sm leading-7 text-white/75">
           We’re making a few improvements to Mixology PRO. Please check back shortly.
         </p>
         <Link
