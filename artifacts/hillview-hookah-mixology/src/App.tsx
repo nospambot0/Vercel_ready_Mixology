@@ -1406,11 +1406,40 @@ function DJPage() {
       playerRef.current = new (window as any).YT.Player('dj-youtube-player', {
         width: '100%',
         height: '100%',
-        playerVars: { playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
+        playerVars: {
+          playsinline: 1,
+          controls: 1,
+          rel: 0,
+          origin: window.location.origin,
+          enablejsapi: 1,
+          iv_load_policy: 3,
+          modestbranding: 1,
+        },
         events: {
-          onReady: () => { playerReadyRef.current = true; setPlayerReady(true); },
+          onReady: () => {
+            playerReadyRef.current = true;
+            setPlayerReady(true);
+          },
           onStateChange: (event: any) => {
-            if (event.data === 0) void control('next');
+            const YTState = (window as any).YT?.PlayerState;
+            if (event.data === YTState?.PLAYING) {
+              try {
+                const MediaSession = (navigator as any).mediaSession;
+                if (MediaSession) {
+                  MediaSession.playbackState = 'playing';
+                  MediaSession.metadata = new MediaMetadata({
+                    title: current?.title || 'Mixology DJ',
+                    artist: 'Mixology PRO',
+                    album: 'Mixology DJ',
+                  });
+                }
+              } catch {}
+            } else if (event.data === YTState?.PAUSED) {
+              try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'paused'); } catch {}
+            } else if (event.data === 0) {
+              try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'none'); } catch {}
+              void control('next');
+            }
           },
           onError: (event: any) => {
             if ([100, 101, 150].includes(event.data)) {
@@ -1435,13 +1464,64 @@ function DJPage() {
   }, []);
 
   useEffect(() => {
+    const mediaSession = (navigator as any).mediaSession;
+    if (!mediaSession) return;
+    const setAction = (action: string, handler: () => void) => {
+      try { mediaSession.setActionHandler(action, handler); } catch {}
+    };
+    setAction('play', () => { try { playerRef.current?.playVideo?.(); } catch {} });
+    setAction('pause', () => { try { playerRef.current?.pauseVideo?.(); } catch {} });
+    setAction('nexttrack', () => void control('next'));
+    return () => {
+      for (const action of ['play', 'pause', 'nexttrack']) {
+        try { mediaSession.setActionHandler(action, null); } catch {}
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!current || !playerReadyRef.current || !playerRef.current) return;
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
+    try {
+      const iframe = document.getElementById('dj-youtube-player')?.querySelector('iframe') as HTMLIFrameElement | null;
+      if (iframe) iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+    } catch {}
+    try {
+      const mediaSession = (navigator as any).mediaSession;
+      if (mediaSession) {
+        mediaSession.metadata = new MediaMetadata({
+          title: current.title || 'Mixology DJ',
+          artist: current.requesterName ? `Requested by ${current.requesterName}` : 'Mixology PRO',
+          album: 'Mixology DJ',
+        });
+      }
+    } catch {}
     playerRef.current.loadVideoById(videoId);
-  }, [current?.id, playerReady]);
+  }, [current?.id, current?.title, playerReady]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Some mobile browsers suspend an embedded player while the page is hidden.
+      // Ask the official YouTube API to resume the active item when the page returns.
+      if (current && playerRef.current) {
+        try {
+          const state = playerRef.current.getPlayerState?.();
+          const YTState = (window as any).YT?.PlayerState;
+          if (state === YTState?.PAUSED || state === YTState?.CUED) playerRef.current.playVideo?.();
+        } catch {}
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [current?.id]);
 
   useEffect(() => () => {
+    try {
+      const mediaSession = (navigator as any).mediaSession;
+      if (mediaSession) mediaSession.playbackState = 'none';
+    } catch {}
     try { playerRef.current?.destroy(); } catch {}
     try { void audioContextRef.current?.close(); } catch {}
   }, []);
@@ -1456,7 +1536,7 @@ function DJPage() {
       <div className="mx-auto max-w-6xl">
         <div className="pt-4 md:pt-10">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div><SectionEyebrow>STAFF CONTROL / DJ</SectionEyebrow><h1 className="hv-display text-5xl leading-tight md:text-7xl">Mixology DJ</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Keep this page open on the phone connected to the speaker. YouTube songs play inside the browser.</p></div>
+            <div><SectionEyebrow>STAFF CONTROL / DJ</SectionEyebrow><h1 className="hv-display text-5xl leading-tight md:text-7xl">Mixology DJ</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Keep this page open on the phone connected to the speaker. YouTube songs play inside the browser; background/lock-screen controls are enabled where the browser supports them.</p></div>
             <div className="flex gap-2"><button type="button" onClick={() => setShowQr(true)} className="flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-xs font-bold hover:bg-muted"><QrCode size={16} /> Request QR</button><Link href="/manage" className="hidden min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-xs font-bold hover:bg-muted md:inline-flex"><ArrowLeft size={15} /> Dashboard</Link></div>
           </div>
         </div>
