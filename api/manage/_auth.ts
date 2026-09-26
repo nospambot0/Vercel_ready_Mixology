@@ -107,7 +107,7 @@ function readOtpToken(value: string | undefined): { code: string; issuedAt: numb
     if (typeof parsed.code !== 'string' || typeof parsed.issuedAt !== 'number') return null;
     if (!/^\d{6}$/.test(parsed.code)) return null;
     if (Date.now() - parsed.issuedAt > OTP_MAX_AGE * 1000) return null;
-    return { email: parsed.email, code: parsed.code, issuedAt: parsed.issuedAt };
+    return { code: parsed.code, issuedAt: parsed.issuedAt };
   } catch {
     return null;
   }
