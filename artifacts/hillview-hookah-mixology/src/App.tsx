@@ -369,7 +369,35 @@ function HomeIntroAnimation() {
   );
 }
 
+function MaintenanceHome() {
+  return (
+    <main className="hv-shell hv-page-in flex min-h-[72vh] items-center justify-center pb-32">
+      <section className="w-full max-w-xl rounded-[2rem] bg-primary px-7 py-12 text-center text-primary-foreground shadow-2xl shadow-primary/20 md:px-12 md:py-16">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
+          <Settings2 size={28} />
+        </div>
+        <SectionEyebrow>MIXOLOGY PRO / MAINTENANCE</SectionEyebrow>
+        <h1 className="hv-display text-5xl md:text-6xl">Under Maintenance</h1>
+        <p className="mx-auto mt-5 max-w-md text-sm leading-7 text-primary-foreground/70">
+          We’re making a few improvements to Mixology PRO. Please check back shortly.
+        </p>
+        <Link
+          href="/manage"
+          className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground shadow-lg"
+          data-testid="link-maintenance-staff-login"
+        >
+          <Settings2 size={17} />
+          STAFF LOGIN
+        </Link>
+      </section>
+    </main>
+  );
+}
+
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
+  return <MaintenanceHome />;
+
+  /*
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
   const shelfFlavours = catalog.flavours.slice(0, 8);
   const shelfPremixes = catalog.premixes.slice(0, 4);
@@ -530,6 +558,7 @@ function StepHeader({ step, total, onBack }: { step: number; total: number; onBa
       </div>
     </div>
   );
+  */
 }
 
 function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: Choice) => void; editChoice: Choice | null; launch: 'fresh' | 'surprise' | 'edit'; catalog: Catalog }) {
