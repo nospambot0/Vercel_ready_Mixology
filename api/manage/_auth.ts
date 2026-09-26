@@ -88,12 +88,12 @@ function readBody(body: unknown): Record<string, unknown> {
   return {};
 }
 
-function createOtpToken(email: string, code: string, issuedAt: number): string {
-  const payload = Buffer.from(JSON.stringify({ email, code, issuedAt }), 'utf8').toString('base64url');
+function createOtpToken(code: string, issuedAt: number): string {
+  const payload = Buffer.from(JSON.stringify({ code, issuedAt }), 'utf8').toString('base64url');
   return `o:${payload}.${sign(payload)}`;
 }
 
-function readOtpToken(value: string | undefined): { email: string; code: string; issuedAt: number } | null {
+function readOtpToken(value: string | undefined): { code: string; issuedAt: number } | null {
   if (!value?.startsWith('o:')) return null;
   const body = value.slice(2);
   const separator = body.lastIndexOf('.');
@@ -104,7 +104,7 @@ function readOtpToken(value: string | undefined): { email: string; code: string;
 
   try {
     const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    if (typeof parsed.email !== 'string' || typeof parsed.code !== 'string' || typeof parsed.issuedAt !== 'number') return null;
+    if (typeof parsed.code !== 'string' || typeof parsed.issuedAt !== 'number') return null;
     if (!/^\d{6}$/.test(parsed.code)) return null;
     if (Date.now() - parsed.issuedAt > OTP_MAX_AGE * 1000) return null;
     return { email: parsed.email, code: parsed.code, issuedAt: parsed.issuedAt };
@@ -133,14 +133,14 @@ function isValidPassword(password: string): boolean {
   return Boolean(configured && password && safeEqual(password, configured));
 }
 
-async function sendOtpEmail(email: string, code: string): Promise<void> {
+async function sendOtpEmail(code: string): Promise<void> {
   const apiKey = getEnv('RESEND_API_KEY');
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: 'Mixology PRO <staff@mixology.monster>',
-      to: [email],
+      to: [...STAFF_OTP_EMAILS],
       subject: 'Mixology PRO verification code',
       text: [
         'Mixology PRO staff verification',
@@ -178,14 +178,8 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
   }
 
   if (action === 'send') {
-    const requestedEmail = typeof body.email === 'string' ? normalizeEmail(body.email) : DEFAULT_STAFF_OTP_EMAIL;
-    if (!isAuthorizedStaffEmail(requestedEmail)) {
-      sendJson(res, 403, { message: 'That email is not authorized for Mixology PRO staff access.' });
-      return;
-    }
-    const email = requestedEmail;
     const existing = readOtpToken(cookies[OTP_COOKIE]);
-    if (existing && Date.now() - existing.issuedAt < OTP_RESEND_COOLDOWN * 1000 && existing.email === email) {
+    if (existing && Date.now() - existing.issuedAt < OTP_RESEND_COOLDOWN * 1000) {
       sendJson(res, 429, { message: 'Please wait a minute before requesting another code.' });
       return;
     }
@@ -194,20 +188,19 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
     const issuedAt = Date.now();
 
     try {
-      await sendOtpEmail(email, code);
-      setCookie(res, OTP_COOKIE, createOtpToken(email, code, issuedAt), OTP_MAX_AGE);
-      sendJson(res, 200, { sent: true, email: maskEmail(email), expiresIn: OTP_MAX_AGE });
+      await sendOtpEmail(code);
+      setCookie(res, OTP_COOKIE, createOtpToken(code, issuedAt), OTP_MAX_AGE);
+      sendJson(res, 200, { sent: true, expiresIn: OTP_MAX_AGE });
     } catch (error) {
       sendJson(res, 502, { message: error instanceof Error ? error.message : 'Could not send the verification email.' });
     }
     return;
   }
 
-  const requestedEmail = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
   const code = typeof body.code === 'string' ? body.code.trim() : '';
   const otp = readOtpToken(cookies[OTP_COOKIE]);
 
-  if (!requestedEmail || !isAuthorizedStaffEmail(requestedEmail) || !otp || otp.email !== requestedEmail || !/^\d{6}$/.test(code) || !safeEqual(otp.code, code)) {
+  if (!otp || !/^\d{6}$/.test(code) || !safeEqual(otp.code, code)) {
     clearCookie(res, OTP_COOKIE);
     sendJson(res, 401, { message: 'That verification code is invalid or expired.' });
     return;
