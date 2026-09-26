@@ -370,9 +370,38 @@ function HomeIntroAnimation() {
 }
 
 function MaintenanceHome() {
+  const hookahBrands = ['AL FAKHER', 'ADALYA', 'AL FAUZ', 'MAHROOSH', 'STARBUZZ', 'FUMARI', 'AFZAL', 'SOCIAL SMOKE'];
+
   return (
-    <main className="hv-shell hv-page-in flex min-h-[72vh] items-center justify-center pb-32">
-      <section className="w-full max-w-xl rounded-[2rem] bg-primary px-7 py-12 text-center text-primary-foreground shadow-2xl shadow-primary/20 md:px-12 md:py-16">
+    <main className="relative flex min-h-[calc(100vh-6rem)] items-center justify-center overflow-hidden px-4 pb-32">
+      <div className="absolute inset-0 overflow-hidden bg-[#090909]" aria-hidden="true">
+        <div className="absolute inset-[-8%] grid grid-cols-2 gap-2 opacity-55 sm:grid-cols-3 md:grid-cols-4">
+          {hookahBrands.map((brand, index) => (
+            <div
+              key={brand}
+              className="relative min-h-40 overflow-hidden border border-white/10 bg-black"
+              style={{ transform: `rotate(${index % 2 === 0 ? '-2deg' : '2deg'}) scale(1.06)` }}
+            >
+              <img
+                src={HOME_INTRO_HOOKAH}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover grayscale"
+                style={{ opacity: index % 3 === 0 ? 0.68 : 0.48 }}
+              />
+              <div className="absolute inset-0 bg-black/45" />
+              <div className="absolute inset-0 flex items-center justify-center p-3">
+                <span className="hv-display text-center text-lg tracking-[0.08em] text-white/90 drop-shadow-2xl sm:text-xl">
+                  {brand}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/65 to-black/85" />
+      </div>
+
+      <section className="relative z-10 w-full max-w-xl rounded-[2rem] border border-white/10 bg-primary/90 px-7 py-12 text-center text-primary-foreground shadow-2xl shadow-black/40 backdrop-blur-sm md:px-12 md:py-16">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
           <Settings2 size={28} />
         </div>
