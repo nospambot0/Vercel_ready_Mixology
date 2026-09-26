@@ -1527,6 +1527,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
   const [method, setMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('ekalabyapradhan70@gmail.com');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
@@ -1577,7 +1578,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'send' }),
+        body: JSON.stringify({ action: 'send', email }),
       });
       const data = await response.json().catch(() => ({}));
       if (response.status < 200 || response.status >= 300) {
@@ -1602,7 +1603,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action: 'verify', code }),
+        body: JSON.stringify({ action: 'verify', email, code }),
       });
       const data = await response.json().catch(() => ({}));
       if (response.status < 200 || response.status >= 300) {
@@ -1663,17 +1664,20 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><Settings2 size={22} /></div>
               <SectionEyebrow>STAFF ACCESS</SectionEyebrow>
               <h1 className="hv-display text-4xl">Email OTP login</h1>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">Tap below to send a one-time verification code to the authorized staff Gmail account.</p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">Enter an authorized staff email to receive a one-time verification code.</p>
+              <label className="mt-7 block text-xs font-bold" htmlFor="manage-email">Staff email
+                <input id="manage-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value.trim())} className={manageInputClass} placeholder="staff@example.com" data-testid="input-manage-email" />
+              </label>
               {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
               <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending} data-testid="button-manage-send-code">{sending ? 'Sending code…' : 'Send verification code'}</button>
-              <p className="mt-4 text-center text-[10px] leading-5 text-muted-foreground">The OTP is always sent to the authorized staff Gmail account.</p>
+              <p className="mt-4 text-center text-[10px] leading-5 text-muted-foreground">Only authorized staff emails can request a code.</p>
             </form>
           ) : (
             <form className="hv-surface rounded-[2rem] p-6 md:p-8" onSubmit={verifyCode} data-testid="form-manage-verify">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/20 text-secondary-foreground"><CheckCircle2 size={22} /></div>
               <SectionEyebrow>CHECK YOUR EMAIL</SectionEyebrow>
               <h1 className="hv-display text-4xl">Enter your code</h1>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">A 6-digit OTP has been sent to the authorized staff Gmail account. It expires in 10 minutes.</p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">A 6-digit OTP has been sent to <span className="font-semibold text-foreground">{email}</span>. It expires in 10 minutes.</p>
               <label className="mt-7 block text-xs font-bold" htmlFor="manage-code">Verification code<input id="manage-code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={manageInputClass + ' text-center text-xl tracking-[0.45em] font-bold'} placeholder="123456" data-testid="input-manage-code" /></label>
               {error && <p className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive" role="alert">{error}</p>}
               <button className="mt-5 flex min-h-12 w-full items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" type="submit" disabled={sending || code.length !== 6} data-testid="button-manage-verify">{sending ? 'Verifying…' : 'Verify & unlock'}</button>
