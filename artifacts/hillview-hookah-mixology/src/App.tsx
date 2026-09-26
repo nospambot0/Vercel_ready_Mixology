@@ -1484,7 +1484,8 @@ function DJPage() {
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
     try {
-      const iframe = document.getElementById('dj-youtube-player')?.querySelector('iframe') as HTMLIFrameElement | null;
+      const playerElement = document.getElementById('dj-youtube-player');
+      const iframe = (playerElement?.tagName === 'IFRAME' ? playerElement : playerElement?.querySelector('iframe')) as HTMLIFrameElement | null;
       if (iframe) iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
     } catch {}
     try {
