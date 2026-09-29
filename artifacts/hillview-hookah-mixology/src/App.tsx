@@ -1988,8 +1988,47 @@ function AgeGate() {
   );
 }
 
-function App() {
+function AppContent({
+  choice,
+  setChoice,
+  catalog,
+  setCatalog,
+  launch,
+  setLaunch,
+}: {
+  choice: Choice | null;
+  setChoice: (choice: Choice | null) => void;
+  catalog: Catalog;
+  setCatalog: (catalog: Catalog) => void;
+  launch: 'fresh' | 'surprise' | 'edit';
+  setLaunch: (launch: 'fresh' | 'surprise' | 'edit') => void;
+}) {
   const [, setLocation] = useLocation();
+
+  const setFinderLaunch = (next: 'fresh' | 'surprise' | 'edit') => {
+    setLaunch(next);
+    setLocation('/find');
+  };
+
+  return (
+    <AppShell choice={choice}>
+      <RouterView
+        choice={choice}
+        onSave={(next) => { setChoice(next); setLocation('/choice'); }}
+        onEdit={() => setFinderLaunch('edit')}
+        onReset={() => { setChoice(null); setFinderLaunch('fresh'); }}
+        launch={launch}
+        setLaunch={setFinderLaunch}
+        onFind={() => setFinderLaunch('fresh')}
+        onSurprise={() => setFinderLaunch('surprise')}
+        catalog={catalog}
+        onCatalogChange={setCatalog}
+      />
+    </AppShell>
+  );
+}
+
+function App() {
   const [choice, setChoice] = useState<Choice | null>(readChoice);
   const [catalog, setCatalog] = useState<Catalog>(readCatalog);
   const [launch, setLaunch] = useState<'fresh' | 'surprise' | 'edit'>('fresh');
@@ -2003,29 +2042,18 @@ function App() {
     localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(catalog));
   }, [catalog]);
 
-  const setFinderLaunch = (next: 'fresh' | 'surprise' | 'edit') => {
-    setLaunch(next);
-    setLocation('/find');
-  };
-
   return (
     <>
       <AgeGate />
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-        <AppShell choice={choice}>
-        <RouterView
+        <AppContent
           choice={choice}
-          onSave={(next) => { setChoice(next); setLocation('/choice'); }}
-          onEdit={() => setFinderLaunch('edit')}
-          onReset={() => { setChoice(null); setFinderLaunch('fresh'); }}
-          launch={launch}
-          setLaunch={setFinderLaunch}
-          onFind={() => setFinderLaunch('fresh')}
-          onSurprise={() => setFinderLaunch('surprise')}
+          setChoice={setChoice}
           catalog={catalog}
-           onCatalogChange={setCatalog}
-          />
-        </AppShell>
+          setCatalog={setCatalog}
+          launch={launch}
+          setLaunch={setLaunch}
+        />
       </WouterRouter>
     </>
   );
