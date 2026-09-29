@@ -423,6 +423,33 @@ function MaintenanceHome() {
 }
 
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
+  const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
+  const shelfFlavours = catalog.flavours.slice(0, 8);
+  const shelfPremixes = catalog.premixes.slice(0, 4);
+  return (
+    <main className="hv-shell hv-page-in pb-28">
+      <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
+        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
+        <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative max-w-2xl">
+          <SectionEyebrow>MIXOLOGY PRO / TABLESIDE GUIDE 01</SectionEyebrow>
+          <p className="mb-5 max-w-md text-sm leading-6 text-primary-foreground/65">A quiet way to find a flavour you will actually enjoy.</p>
+          <h1 className="hv-display text-[3.4rem] leading-[.98] tracking-[-.055em] md:text-[5.6rem]">Find Your<br /><span className="text-secondary">Perfect Hookah.</span></h1>
+          <p className="mt-7 max-w-md text-base leading-7 text-primary-foreground/75 md:text-lg">Tell us what you like. We’ll create the mix.</p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <button className="hv-press flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground shadow-lg shadow-secondary/20" onClick={onFind} data-testid="button-find-my-hookah">FIND MY HOOKAH <ArrowRight size={18} /></button>
+            <button className="hv-press flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/20 px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/10" onClick={onSurprise} data-testid="button-surprise-me"><Sparkles size={17} /> SURPRISE ME</button>
+          </div>
+        </div>
+      </section>
+      <section className="py-14 md:py-20">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><SectionEyebrow>START WITH A MOOD</SectionEyebrow><h2 className="hv-display text-4xl md:text-5xl">What sounds good?</h2></div><p className="max-w-xs text-sm leading-6 text-muted-foreground">Tap a starting point, or let the expert take the first pour.</p></div>
+        <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{popular.map((taste) => <button key={taste} className="hv-press hv-surface group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-left hover:-translate-y-1 hover:border-secondary" onClick={onFind}><span className="hv-mono text-[10px] text-accent">MOOD</span><span className="hv-display text-2xl">{taste}</span></button>)}</div>
+      </section>
+      <section className="grid gap-5 pb-10 md:grid-cols-2"><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>FLAVOUR SHELF</SectionEyebrow><h2 className="hv-display text-3xl">Available flavours</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfFlavours.map((flavour) => <div key={flavour.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{flavour.brand}</p></div></div>)}</div></div><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>PREMIX LIBRARY</SectionEyebrow><h2 className="hv-display text-3xl">Famous mixes</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfPremixes.map((premix) => <div key={premix.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><PremixVisual premix={premix} size="sm" /><p className="truncate text-sm font-bold">{premix.name}</p></div>)}</div></div></section>
+    </main>
+  );
+}
 
 
 function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: Choice) => void; editChoice: Choice | null; launch: 'fresh' | 'surprise' | 'edit'; catalog: Catalog }) {
