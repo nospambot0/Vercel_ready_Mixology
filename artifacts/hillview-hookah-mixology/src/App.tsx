@@ -1382,6 +1382,9 @@ function DJPage() {
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState('');
   const [showQr, setShowQr] = useState(false);
+  const [staffUrl, setStaffUrl] = useState('');
+  const [staffRequesterName, setStaffRequesterName] = useState('Staff');
+  const [staffAdding, setStaffAdding] = useState(false);
   const [copied, setCopied] = useState(false);
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
@@ -1439,6 +1442,23 @@ function DJPage() {
       window.removeEventListener('click', unlockAudio);
     };
   }, []);
+
+  const addStaffSong = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setNotice('');
+    const trimmed = staffUrl.trim();
+    if (!extractYouTubeId(trimmed)) { setNotice('Paste a valid YouTube song link.'); return; }
+    setStaffAdding(true);
+    try {
+      const response = await fetch('/api/dj/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: trimmed, requesterName: staffRequesterName.trim() || 'Staff' }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not add that song.');
+      setStaffUrl('');
+      setNotice('Song added to the queue by staff.');
+      await loadQueue();
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not add that song.'); }
+    finally { setStaffAdding(false); }
+  };
 
   const control = async (action: string, id?: string) => {
     setWorking(true);
@@ -1609,6 +1629,12 @@ function DJPage() {
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
+            <form onSubmit={addStaffSong} className="mb-6 rounded-2xl border border-border/70 bg-background/40 p-4">
+              <SectionEyebrow>STAFF ADD</SectionEyebrow><h3 className="hv-display text-2xl">Add song to queue</h3>
+              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Add a YouTube request directly from the Manage DJ page.</p>
+              <input type="text" value={staffRequesterName} onChange={(event) => setStaffRequesterName(event.target.value)} placeholder="Staff name (optional)" maxLength={80} className="mt-4 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" />
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row"><input type="url" required value={staffUrl} onChange={(event) => setStaffUrl(event.target.value)} placeholder="Paste YouTube song link…" className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" /><button type="submit" disabled={staffAdding} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"><Plus size={15} /> {staffAdding ? 'Adding…' : 'Add Queue'}</button></div>
+            </form>
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>SHARED QUEUE</SectionEyebrow><h2 className="hv-display text-3xl">Up next</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{queue.length}</span></div>
             <div className="mt-5 space-y-2">
               {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p> : queue.length === 0 ? <p className="rounded-2xl border border-dashed border-border p-7 text-center text-sm text-muted-foreground">No requests yet.</p> :
