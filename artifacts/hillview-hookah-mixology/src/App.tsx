@@ -452,6 +452,36 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
 }
 
 
+function StepHeader({ step, total, onBack }: { step: number; total: number; onBack?: () => void }) {
+  return (
+    <div className="mb-8 flex items-center justify-between gap-4">
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex min-h-10 items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          data-testid="button-step-back"
+        >
+          <ArrowLeft size={17} /> Back
+        </button>
+      ) : (
+        <span />
+      )}
+      <div className="flex items-center gap-2" aria-label={`Step ${step} of ${total}`}>
+        {Array.from({ length: total }, (_, index) => (
+          <span
+            key={index}
+            className={`h-1.5 rounded-full transition-all ${index < step ? 'w-8 bg-secondary' : 'w-4 bg-muted'}`}
+          />
+        ))}
+        <span className="ml-2 hv-mono text-[10px] text-muted-foreground">
+          {step}/{total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function FinderPage({ onSave, editChoice, launch, catalog }: { onSave: (choice: Choice) => void; editChoice: Choice | null; launch: 'fresh' | 'surprise' | 'edit'; catalog: Catalog }) {
   const [stage, setStage] = useState<'taste' | 'strength' | 'favourite' | 'results' | 'customize' | 'final'>('taste');
   const [answers, setAnswers] = useState<FinderAnswers>(emptyAnswers);
