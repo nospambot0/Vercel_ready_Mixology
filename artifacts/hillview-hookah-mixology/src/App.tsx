@@ -1907,10 +1907,10 @@ function NotFoundPage() {
   return <main className="hv-shell flex min-h-[60vh] flex-col items-center justify-center text-center"><span className="hv-mono text-[10px] text-accent">404 / WRONG TURN</span><h1 className="hv-display mt-4 text-5xl">That cloud drifted away.</h1><Link href="/" className="mt-7 flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground" data-testid="link-not-found-home">Back home <ArrowRight size={16} /></Link></main>;
 }
 
-function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalog, onCatalogChange }: { choice: Choice | null; onSave: (choice: Choice) => void; onEdit: () => void; onReset: () => void; launch: 'fresh' | 'surprise' | 'edit'; setLaunch: (launch: 'fresh' | 'surprise' | 'edit') => void; catalog: Catalog; onCatalogChange: (next: Catalog) => void }) {
+function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, onFind, onSurprise, catalog, onCatalogChange }: { choice: Choice | null; onSave: (choice: Choice) => void; onEdit: () => void; onReset: () => void; launch: 'fresh' | 'surprise' | 'edit'; setLaunch: (launch: 'fresh' | 'surprise' | 'edit') => void; onFind: () => void; onSurprise: () => void; catalog: Catalog; onCatalogChange: (next: Catalog) => void }) {
   return (
     <Switch>
-      <Route path="/"><HomePage onFind={() => { setFinderLaunch('fresh'); }} onSurprise={() => { setFinderLaunch('surprise'); }} catalog={catalog} /></Route>
+      <Route path="/"><HomePage onFind={onFind} onSurprise={onSurprise} catalog={catalog} /></Route>
       <Route path="/find"><FinderPage onSave={onSave} editChoice={choice} launch={launch} catalog={catalog} /></Route>
       <Route path="/choice"><ChoicePage choice={choice} onEdit={onEdit} onReset={onReset} catalog={catalog} /></Route>
       <Route path="/flavours"><FlavoursSeoPage catalog={catalog} /></Route>
@@ -2020,7 +2020,9 @@ function App() {
           onReset={() => { setChoice(null); setFinderLaunch('fresh'); }}
           launch={launch}
           setLaunch={setFinderLaunch}
-           catalog={catalog}
+          onFind={() => setFinderLaunch('fresh')}
+          onSurprise={() => setFinderLaunch('surprise')}
+          catalog={catalog}
            onCatalogChange={setCatalog}
           />
         </AppShell>
