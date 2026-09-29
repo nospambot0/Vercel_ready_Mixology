@@ -1204,7 +1204,20 @@ function DJRequestPage() {
           <h1 className="hv-display text-5xl leading-tight md:text-7xl">DJ Queue</h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a YouTube song link. The DJ phone will play accepted requests from the shared queue.</p>
         </div>
-        <form onSubmit={addSong} className="hv-surface mt-8 rounded-[2rem] p-5 md:p-7">
+        <section className="mt-7 overflow-hidden rounded-[2rem] border border-secondary/30 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/10 p-5 shadow-lg shadow-secondary/5 md:p-6" aria-live="polite" data-testid="banner-currently-playing">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
+              <Disc3 size={23} className={current ? 'animate-[spin_3s_linear_infinite]' : ''} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="hv-mono text-[10px] font-bold tracking-[0.18em] text-secondary">CURRENTLY PLAYING · HILLVIEW CAFE & RESTRO</p>
+              <h2 className="mt-1 truncate font-semibold text-base md:text-lg">{current?.title || 'Nothing playing right now'}</h2>
+              <p className="mt-1 text-[11px] text-muted-foreground">{current ? 'Playing live in the cafe' : 'The DJ will appear here when the next song starts.'}</p>
+            </div>
+            {current && <span className="shrink-0 rounded-full bg-secondary px-3 py-1 text-[9px] font-black tracking-wider text-secondary-foreground">LIVE</span>}
+          </div>
+        </section>
+        <form onSubmit={addSong} className="hv-surface mt-5 rounded-[2rem] p-5 md:p-7">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name <span className="font-normal text-muted-foreground">(optional)</span>
               <input id="dj-request-name" type="text" value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
