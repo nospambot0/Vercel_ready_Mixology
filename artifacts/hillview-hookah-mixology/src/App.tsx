@@ -1910,7 +1910,7 @@ function NotFoundPage() {
 function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, catalog, onCatalogChange }: { choice: Choice | null; onSave: (choice: Choice) => void; onEdit: () => void; onReset: () => void; launch: 'fresh' | 'surprise' | 'edit'; setLaunch: (launch: 'fresh' | 'surprise' | 'edit') => void; catalog: Catalog; onCatalogChange: (next: Catalog) => void }) {
   return (
     <Switch>
-      <Route path="/"><HomePage onFind={() => { setLaunch('fresh'); }} onSurprise={() => { setLaunch('surprise'); }} catalog={catalog} /></Route>
+      <Route path="/"><HomePage onFind={() => { setFinderLaunch('fresh'); }} onSurprise={() => { setFinderLaunch('surprise'); }} catalog={catalog} /></Route>
       <Route path="/find"><FinderPage onSave={onSave} editChoice={choice} launch={launch} catalog={catalog} /></Route>
       <Route path="/choice"><ChoicePage choice={choice} onEdit={onEdit} onReset={onReset} catalog={catalog} /></Route>
       <Route path="/flavours"><FlavoursSeoPage catalog={catalog} /></Route>
