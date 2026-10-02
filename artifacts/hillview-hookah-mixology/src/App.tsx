@@ -1395,7 +1395,33 @@ function DJPage() {
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
     setAdvPlaying(true);
-    const finish = () => setAdvPlaying(false);
+
+    // Duck the YouTube music slightly while the ADV is speaking, then restore
+    // the exact volume the DJ was using before the announcement.
+    try {
+      if (playerRef.current?.getVolume && playerRef.current?.setVolume) {
+        const currentVolume = Number(playerRef.current.getVolume());
+        if (Number.isFinite(currentVolume)) {
+          advPreviousVolumeRef.current = currentVolume;
+          playerRef.current.setVolume(Math.max(0, Math.round(currentVolume * 0.55)));
+          advVolumeDuckedRef.current = true;
+        }
+      }
+    } catch {}
+
+    const finish = () => {
+      if (advVolumeDuckedRef.current) {
+        try {
+          const previousVolume = advPreviousVolumeRef.current;
+          if (playerRef.current?.setVolume && previousVolume !== null) {
+            playerRef.current.setVolume(previousVolume);
+          }
+        } catch {}
+        advPreviousVolumeRef.current = null;
+        advVolumeDuckedRef.current = false;
+      }
+      setAdvPlaying(false);
+    };
     try {
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
       if (Ctx) {
@@ -1546,6 +1572,8 @@ function DJPage() {
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
+  const advPreviousVolumeRef = useRef<number | null>(null);
+  const advVolumeDuckedRef = useRef(false);
 
   const loadQueue = async () => {
     if (queuePollInFlightRef.current) return;
