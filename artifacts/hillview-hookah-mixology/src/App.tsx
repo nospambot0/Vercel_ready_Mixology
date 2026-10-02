@@ -1468,25 +1468,37 @@ function DJPage() {
     }, 400);
   };
 
-  useEffect(() => {
-    const handleAdvTrigger = (event: StorageEvent) => {
-      if (event.key !== 'mixology-pro-adv-trigger' || !event.newValue) return;
-      try {
-        const payload = JSON.parse(event.newValue) as { id?: string };
-        if (payload.id) playAdvAnnouncement();
-      } catch {}
-    };
-    window.addEventListener('storage', handleAdvTrigger);
-    return () => window.removeEventListener('storage', handleAdvTrigger);
-  }, [advPlaying]);
+  const advStartedAtRef = useRef(Date.now());
+  const lastAdvTriggerIdRef = useRef<string | null>(null);
 
-  const triggerAdvForAllStaffTabs = () => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const checkAdvTrigger = async () => {
     try {
-      localStorage.setItem('mixology-pro-adv-trigger', JSON.stringify({ id, at: Date.now() }));
+      const response = await fetch(`/api/dj/adv?ts=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const trigger = data.trigger as { id?: string; createdAt?: string } | null;
+      if (!trigger?.id || trigger.id === lastAdvTriggerIdRef.current) return;
+      lastAdvTriggerIdRef.current = trigger.id;
+      const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
+      if (createdAt > advStartedAtRef.current - 1000) playAdvAnnouncement();
     } catch {}
-    playAdvAnnouncement();
   };
+
+  const triggerAdvForAllStaffTabs = async () => {
+    playAdvAnnouncement();
+    try {
+      await fetch('/api/dj/adv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    } catch {}
+  };
+
+  useEffect(() => {
+    void checkAdvTrigger();
+  }, []);
+
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1502,6 +1514,7 @@ function DJPage() {
       const response = await fetch(`/api/dj/queue?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load DJ queue.');
+      void checkAdvTrigger();
       const nextCurrent = data.current ?? null;
       const nextQueue = Array.isArray(data.queue) ? data.queue : [];
       const previousIds = lastQueueIdsRef.current;
