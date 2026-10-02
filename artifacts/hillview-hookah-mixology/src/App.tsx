@@ -423,6 +423,7 @@ function MaintenanceHome() {
 }
 
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
+  const [showDjOverlay, setShowDjOverlay] = useState(true);
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
   const shelfFlavours = catalog.flavours.slice(0, 8);
   const shelfPremixes = catalog.premixes.slice(0, 4);
@@ -447,10 +448,30 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
         <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{popular.map((taste) => <button key={taste} className="hv-press hv-surface group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-left hover:-translate-y-1 hover:border-secondary" onClick={onFind}><span className="hv-mono text-[10px] text-accent">MOOD</span><span className="hv-display text-2xl">{taste}</span></button>)}</div>
       </section>
       <section className="grid gap-5 pb-10 md:grid-cols-2"><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>FLAVOUR SHELF</SectionEyebrow><h2 className="hv-display text-3xl">Available flavours</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfFlavours.map((flavour) => <div key={flavour.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{flavour.brand}</p></div></div>)}</div></div><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>PREMIX LIBRARY</SectionEyebrow><h2 className="hv-display text-3xl">Famous mixes</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfPremixes.map((premix) => <div key={premix.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><PremixVisual premix={premix} size="sm" /><p className="truncate text-sm font-bold">{premix.name}</p></div>)}</div></div></section>
+      {showDjOverlay && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 px-5 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="home-dj-overlay-title">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-secondary/30 bg-primary p-7 text-primary-foreground shadow-2xl shadow-black/40 md:p-9">
+            <button type="button" onClick={() => setShowDjOverlay(false)} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Close music overlay" data-testid="button-close-dj-overlay">
+              <X size={19} />
+            </button>
+            <div className="pr-10">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
+                <Music2 size={25} />
+              </div>
+              <SectionEyebrow>HILLVIEW CAFE & RESTRO / DJ</SectionEyebrow>
+              <h2 id="home-dj-overlay-title" className="hv-display text-4xl leading-tight md:text-5xl">Play your song in Hillview Cafe</h2>
+              <p className="mt-4 text-sm leading-6 text-primary-foreground/70">Choose a song and send it to the cafe DJ queue. You can add it to the queue or ask to play it now.</p>
+              <Link href="/dj-request" onClick={() => setShowDjOverlay(false)} className="mt-7 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-5 text-sm font-bold text-secondary-foreground shadow-lg hover:brightness-105" data-testid="link-home-dj-request">
+                <Play size={17} fill="currentColor" /> PLAY YOUR SONG
+                <ArrowRight size={17} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
-
 
 function StepHeader({ step, total, onBack }: { step: number; total: number; onBack?: () => void }) {
   return (
