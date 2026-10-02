@@ -428,7 +428,7 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
   const shelfFlavours = catalog.flavours.slice(0, 8);
   const shelfPremixes = catalog.premixes.slice(0, 4);
   return (
-    <main className="hv-shell hv-page-in pb-28">
+    <main className="hv-shell pb-28">
       <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
         <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
