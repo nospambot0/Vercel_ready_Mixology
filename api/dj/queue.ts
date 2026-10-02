@@ -101,7 +101,7 @@ async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; t
   const timeout = setTimeout(() => controller.abort(), 7000);
   try {
     const query = encodeURIComponent(autoModeQuery(mode));
-    const response = await fetch(\`https://www.youtube.com/results?search_query=\${query}\`, {
+    const response = await fetch(`https://www.youtube.com/results?search_query=${query}`, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
@@ -140,19 +140,19 @@ async function addAutoTracks(sql: any, mode: AutoMode): Promise<{ added: number;
   let skipped = 0;
   for (const track of target) {
     if (added >= 10) break;
-    const normalized = \`https://www.youtube.com/watch?v=\${track.videoId}\`;
+    const normalized = `https://www.youtube.com/watch?v=${track.videoId}`;
     const duplicate = mode === 'latest-bollywood'
-      ? await sql\`SELECT id FROM dj_queue WHERE url = \${normalized} AND created_at > NOW() - INTERVAL '60 minutes' LIMIT 1\`
-      : await sql\`SELECT id FROM dj_queue WHERE url = \${normalized} AND status IN ('queued','playing') LIMIT 1\`;
+      ? await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND created_at > NOW() - INTERVAL '60 minutes' LIMIT 1`
+      : await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND status IN ('queued','playing') LIMIT 1`;
     if (duplicate.length) {
       skipped++;
       continue;
     }
-    const countRows = await sql\`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')\`;
+    const countRows = await sql`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')`;
     if ((countRows[0]?.count ?? 0) >= 100) break;
     const id = randomUUID();
-    await sql\`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at)
-      VALUES (\${id}, 'youtube', \${normalized}, \${track.title}, 'Auto DJ', NULL, 'queued', NOW())\`;
+    await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at)
+      VALUES (${id}, 'youtube', ${normalized}, ${track.title}, 'Auto DJ', NULL, 'queued', NOW())`;
     titles.push(track.title);
     added++;
   }
