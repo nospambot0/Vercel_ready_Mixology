@@ -134,10 +134,6 @@ export async function getStaffOtpEmails(): Promise<string[]> {
   const sql = db();
   await sql`CREATE TABLE IF NOT EXISTS manage_access_emails (email TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
   for (const email of DEFAULT_STAFF_OTP_EMAILS) await sql`INSERT INTO manage_access_emails (email) VALUES (${email}) ON CONFLICT (email) DO NOTHING`;
-  const countRows = await sql`SELECT COUNT(*)::int AS count FROM manage_access_emails`;
-  if (Number(countRows[0]?.count ?? 0) === 0) {
-    for (const email of DEFAULT_STAFF_OTP_EMAILS) await sql`INSERT INTO manage_access_emails (email) VALUES (${email}) ON CONFLICT (email) DO NOTHING`;
-  }
   const rows = await sql`SELECT email FROM manage_access_emails ORDER BY created_at ASC, email ASC`;
   return rows.map((row: any) => String(row.email));
 }

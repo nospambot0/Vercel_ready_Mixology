@@ -1397,9 +1397,6 @@ function DJPage() {
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
-  const autoMixBusyRef = useRef(false);
-  const [autoMixEnabled, setAutoMixEnabled] = useState(false);
-  const [autoMixMode, setAutoMixMode] = useState<'afro-bollywood' | 'cafe-ambient' | 'latest-bollywood'>('afro-bollywood');
 
   const loadQueue = async () => {
     if (queuePollInFlightRef.current) return;
@@ -1489,34 +1486,6 @@ function DJPage() {
     }
   };
 
-  useEffect(() => {
-    if (!autoMixEnabled || autoMixBusyRef.current) return;
-
-    const keepAutoMixRunning = async () => {
-      autoMixBusyRef.current = true;
-      try {
-        // Keep a buffer of songs ready so the DJ does not run out of music.
-        if (queue.length < 3) {
-          await addAutoSongs(autoMixMode);
-          await loadQueue();
-        }
-
-        // If nothing is playing, immediately start the first queued song.
-        if (!current) {
-          const next = queue[0];
-          if (next) {
-            await control('play', next.id);
-          } else {
-            await loadQueue();
-          }
-        }
-      } finally {
-        autoMixBusyRef.current = false;
-      }
-    };
-
-    void keepAutoMixRunning();
-  }, [autoMixEnabled, autoMixMode, current?.id, queue.length]);
 
   const control = async (action: string, id?: string) => {
     setWorking(true);
@@ -1708,38 +1677,6 @@ function DJPage() {
                 <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('afro-bollywood')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'afro-bollywood' ? 'Loading…' : 'Afro Bollywood'}</button>
                 <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('cafe-ambient')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-xs font-bold hover:bg-muted disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'cafe-ambient' ? 'Loading…' : 'Cafe Ambient'}</button>
                 <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('latest-bollywood')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-3 text-xs font-bold hover:bg-secondary/20 disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'latest-bollywood' ? 'Loading…' : 'Latest Bollywood'}</button>
-              </div>
-            </div>
-            <div className="mb-5 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <SectionEyebrow>AUTO MIX</SectionEyebrow>
-                  <h3 className="hv-display text-2xl">{autoMixEnabled ? 'DJ is mixing automatically' : 'Let DJ run automatically'}</h3>
-                  <p className="mt-1 text-[10px] leading-5 text-muted-foreground">Keeps music playing, starts the next song automatically, and refills the queue before it runs dry.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAutoMixEnabled((enabled) => !enabled)}
-                  className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black transition ${autoMixEnabled ? 'bg-secondary text-secondary-foreground' : 'border border-border bg-background hover:bg-muted'}`}
-                  aria-pressed={autoMixEnabled}
-                  data-testid="button-auto-mix"
-                >
-                  <Music2 size={15} /> {autoMixEnabled ? 'AUTO MIX ON' : 'AUTO MIX OFF'}
-                </button>
-              </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-                <select
-                  value={autoMixMode}
-                  onChange={(event) => setAutoMixMode(event.target.value as typeof autoMixMode)}
-                  className="min-h-11 rounded-xl border border-border bg-background px-3 text-xs font-semibold outline-none focus:border-secondary"
-                  disabled={autoMixEnabled}
-                  aria-label="Auto Mix music style"
-                >
-                  <option value="afro-bollywood">Afro Bollywood</option>
-                  <option value="cafe-ambient">Cafe Ambient</option>
-                  <option value="latest-bollywood">Latest Bollywood</option>
-                </select>
-                <span className="flex min-h-11 items-center justify-center rounded-xl bg-background px-4 text-[10px] font-bold text-muted-foreground">Auto-refill at 3 songs</span>
               </div>
             </div>
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>SHARED QUEUE</SectionEyebrow><h2 className="hv-display text-3xl">Up next</h2></div><div className="flex items-center gap-2"><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{queue.length}</span><button type="button" disabled={working || queue.length === 0} onClick={() => void clearQueue()} className="flex min-h-9 items-center gap-1.5 rounded-lg border border-destructive/30 px-3 text-[10px] font-bold text-destructive hover:bg-destructive/10 disabled:opacity-40" data-testid="button-dj-clear-queue"><Trash2 size={13} /> Clear Queue</button></div></div>
