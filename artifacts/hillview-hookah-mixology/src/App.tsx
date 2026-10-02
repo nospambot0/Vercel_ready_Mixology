@@ -1392,6 +1392,8 @@ function DJPage() {
   const [copied, setCopied] = useState(false);
   const [advPlaying, setAdvPlaying] = useState(false);
   const [hkvPlaying, setHkvPlaying] = useState(false);
+  const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
+  const [customAnnouncementText, setCustomAnnouncementText] = useState('');
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -1589,6 +1591,72 @@ function DJPage() {
       speak();
     }
   };
+  const playCustomAnnouncement = (text: string) => {
+    const message = text.trim();
+    if (!message || advPlaying || hkvPlaying || customAnnouncementPlaying) return;
+    setCustomAnnouncementPlaying(true);
+    let previousVolume: number | null = null;
+    let ducked = false;
+    let spoken = false;
+    let fallbackTimer: number | null = null;
+    const duckYouTube = () => {
+      try {
+        if (!playerRef.current?.setVolume) return;
+        if (previousVolume === null && playerRef.current.getVolume) {
+          const currentVolume = Number(playerRef.current.getVolume());
+          if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
+        }
+        if (previousVolume !== null) {
+          playerRef.current.setVolume(Math.max(0, Math.round(previousVolume * 0.4)));
+          ducked = true;
+        }
+      } catch {}
+    };
+    const finish = () => {
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (ducked) {
+        try { if (playerRef.current?.setVolume && previousVolume !== null) playerRef.current.setVolume(previousVolume); } catch {}
+      }
+      setCustomAnnouncementPlaying(false);
+    };
+    const speak = () => {
+      if (spoken) return;
+      spoken = true;
+      try {
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+        duckYouTube();
+        const voices = window.speechSynthesis.getVoices();
+        const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
+        const voice =
+          voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name)) ||
+          voices.find((item) => /^en-IN/i.test(item.lang)) ||
+          voices.find((item) => /^en-GB/i.test(item.lang)) ||
+          voices.find((item) => /^en-US/i.test(item.lang)) ||
+          voices[0];
+        const utterance = new SpeechSynthesisUtterance(message);
+        if (voice) utterance.voice = voice;
+        utterance.lang = voice?.lang || 'en-IN';
+        utterance.rate = 0.86;
+        utterance.pitch = 1.1;
+        utterance.volume = 1;
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+        fallbackTimer = window.setTimeout(() => finish(), Math.max(15000, Math.min(60000, message.length * 95)));
+      } catch { finish(); }
+    };
+    duckYouTube();
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length) speak();
+      else { window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true }); window.setTimeout(speak, 1000); }
+    } catch { speak(); }
+  };
+
   const advStartedAtRef = useRef(Date.now());
   const lastAdvTriggerIdRef = useRef<string | null>(null);
   const lastAdvTriggerAtRef = useRef(0);
@@ -1597,6 +1665,30 @@ function DJPage() {
   const lastHkvTriggerIdRef = useRef<string | null>(null);
   const lastHkvTriggerAtRef = useRef(0);
   const hkvPollInFlightRef = useRef(false);
+  const customAnnouncementStartedAtRef = useRef(Date.now());
+  const lastCustomAnnouncementIdRef = useRef<string | null>(null);
+  const lastCustomAnnouncementAtRef = useRef(0);
+  const customAnnouncementPollInFlightRef = useRef(false);
+
+  const checkCustomAnnouncement = async () => {
+    if (customAnnouncementPollInFlightRef.current) return;
+    customAnnouncementPollInFlightRef.current = true;
+    try {
+      const response = await fetch(`/api/dj/announcement?ts=${Date.now()}`, { cache: 'no-store', credentials: 'include' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const trigger = data.trigger as { id?: string; createdAt?: string; text?: string } | null;
+      if (!trigger?.id || !trigger.text || trigger.id === lastCustomAnnouncementIdRef.current) return;
+      const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
+      lastCustomAnnouncementIdRef.current = trigger.id;
+      if (!createdAt || createdAt <= lastCustomAnnouncementAtRef.current) return;
+      lastCustomAnnouncementAtRef.current = createdAt;
+      if (createdAt < customAnnouncementStartedAtRef.current - 1500) return;
+      try { if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume(); } catch {}
+      playCustomAnnouncement(trigger.text);
+    } catch {
+    } finally { customAnnouncementPollInFlightRef.current = false; }
+  };
 
   const checkHkvTrigger = async () => {
     if (hkvPollInFlightRef.current) return;
@@ -1692,15 +1784,33 @@ function DJPage() {
       if (!response.ok) throw new Error('HKV broadcast failed');
       const data = await response.json().catch(() => ({}));
       if (data.id) lastHkvTriggerIdRef.current = String(data.id);
-    } catch {
-      setNotice('HKV played here, but the staff-device broadcast could not be sent.');
-    }
+    } catch { setNotice('HKV played here, but the staff-device broadcast could not be sent.'); }
+  };
+
+  const triggerCustomAnnouncement = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const message = customAnnouncementText.trim();
+    if (!message) { setNotice('Enter an announcement first.'); return; }
+    if (message.length > 500) { setNotice('Announcement is limited to 500 characters.'); return; }
+    if (advPlaying || hkvPlaying || customAnnouncementPlaying) return;
+    setNotice('');
+    try {
+      const response = await fetch('/api/dj/announcement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ text: message }), cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Announcement broadcast failed.');
+      if (data.id) lastCustomAnnouncementIdRef.current = String(data.id);
+      setCustomAnnouncementText('');
+      setNotice('Announcement sent to all open staff DJ devices.');
+      playCustomAnnouncement(message);
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Announcement broadcast failed.'); }
   };
 
   useEffect(() => {
     // Poll HKV independently so remote staff devices receive the announcement.
     void checkHkvTrigger();
     const hkvTimer = window.setInterval(() => void checkHkvTrigger(), 750);
+    void checkCustomAnnouncement();
+    const customAnnouncementTimer = window.setInterval(() => void checkCustomAnnouncement(), 750);
 
     // Poll independently from the queue so ADV delivery is not delayed by queue
     // requests or another slow network call.
@@ -1713,6 +1823,7 @@ function DJPage() {
     return () => {
       window.clearInterval(timer);
       window.clearInterval(hkvTimer);
+      window.clearInterval(customAnnouncementTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
@@ -1993,7 +2104,17 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
+              <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
+              <h3 className="hv-display text-2xl">Speak to every staff device</h3>
+              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. Music dips to 40% while the female announcement plays, then returns to the exact previous volume.</p>
+              <textarea value={customAnnouncementText} onChange={(event) => setCustomAnnouncementText(event.target.value)} maxLength={500} rows={3} placeholder="Type your announcement here…" className="mt-4 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-xs outline-none focus:border-secondary" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} />
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="font-mono text-[10px] text-muted-foreground">{customAnnouncementText.length}/500</span>
+                <button type="submit" disabled={!customAnnouncementText.trim() || advPlaying || hkvPlaying || customAnnouncementPlaying} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-secondary px-5 text-xs font-black text-secondary-foreground disabled:opacity-50" data-testid="button-dj-custom-announcement"><Megaphone size={15} /> {customAnnouncementPlaying ? 'PLAYING…' : 'ANNOUNCE NOW'}</button>
+              </div>
+            </form>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
