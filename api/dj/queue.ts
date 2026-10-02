@@ -101,7 +101,7 @@ async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; t
   const timeout = setTimeout(() => controller.abort(), 7000);
   try {
     const query = encodeURIComponent(autoModeQuery(mode));
-    const response = await fetch(`https://www.youtube.com/results?search_query=${query}`, {
+    const response: any = await fetch(`https://www.youtube.com/results?search_query=${query}`, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
