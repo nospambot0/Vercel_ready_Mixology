@@ -1405,37 +1405,81 @@ function DJPage() {
           const now = context.currentTime;
           const master = context.createGain();
           master.gain.setValueAtTime(0.0001, now);
-          master.gain.exponentialRampToValueAtTime(0.12, now + 0.03);
-          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+          master.gain.exponentialRampToValueAtTime(0.14, now + 0.03);
+          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
           master.connect(context.destination);
-          [659.25, 783.99, 1046.5].forEach((frequency, index) => {
+          [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
             const oscillator = context.createOscillator();
             const gain = context.createGain();
-            const start = now + index * 0.08;
-            oscillator.type = index === 2 ? 'sine' : 'triangle';
+            const start = now + index * 0.09;
+            oscillator.type = index > 1 ? 'sine' : 'triangle';
             oscillator.frequency.setValueAtTime(frequency, start);
             gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.55, start + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+            gain.gain.exponentialRampToValueAtTime(0.5, start + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
             oscillator.connect(gain); gain.connect(master);
-            oscillator.start(start); oscillator.stop(start + 0.32);
+            oscillator.start(start); oscillator.stop(start + 0.38);
           });
         };
         if (context.state === 'suspended') void context.resume().then(playStinger).catch(() => {}); else playStinger();
       }
     } catch {}
+
     window.setTimeout(() => {
       try {
-        window.speechSynthesis.cancel();
+        const speak = () => {
+          const voices = window.speechSynthesis.getVoices();
+          const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
+          const voice =
+            voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name)) ||
+            voices.find((item) => /^en-IN/i.test(item.lang)) ||
+            voices.find((item) => /^en-GB/i.test(item.lang)) ||
+            voices.find((item) => /^en-US/i.test(item.lang)) ||
+            voices[0];
+
+          const utterance = new SpeechSynthesisUtterance('Mixology Pro, presented by Hillview Cafe. Play your music now using our app.');
+          if (voice) utterance.voice = voice;
+          utterance.lang = voice?.lang || 'en-IN';
+          utterance.rate = 0.9;
+          utterance.pitch = 1.08;
+          utterance.volume = 1;
+          utterance.onend = finish;
+          utterance.onerror = finish;
+          window.speechSynthesis.speak(utterance);
+        };
+
         const voices = window.speechSynthesis.getVoices();
-        const voice = voices.find((item) => /^en-IN/i.test(item.lang)) || voices.find((item) => /^en-GB/i.test(item.lang)) || voices.find((item) => /^en-US/i.test(item.lang)) || voices[0];
-        const utterance = new SpeechSynthesisUtterance('Mixology Pro, presented by Hillview Cafe. Play your music now using our app.');
-        if (voice) utterance.voice = voice;
-        utterance.lang = voice?.lang || 'en-IN'; utterance.rate = 0.94; utterance.pitch = 0.95; utterance.volume = 1;
-        utterance.onend = finish; utterance.onerror = finish;
-        window.speechSynthesis.speak(utterance);
+        if (voices.length) {
+          speak();
+        } else {
+          window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+          window.setTimeout(speak, 500);
+        }
       } catch { finish(); }
-    }, 350);
+    }, 400);
+  };
+
+  useEffect(() => {
+    const handleAdvTrigger = (event: StorageEvent) => {
+      if (event.key !== 'mixology-pro-adv-trigger' || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { id?: string };
+        if (payload.id) playAdvAnnouncement();
+      } catch {}
+    };
+    window.addEventListener('storage', handleAdvTrigger);
+    return () => window.removeEventListener('storage', handleAdvTrigger);
+  }, [advPlaying]);
+
+  const triggerAdvForAllStaffTabs = () => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    try {
+      localStorage.setItem('mixology-pro-adv-trigger', JSON.stringify({ id, at: Date.now() }));
+    } catch {}
+    playAdvAnnouncement();
   };
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
@@ -1710,7 +1754,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying} onClick={playAdvAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button></div>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
