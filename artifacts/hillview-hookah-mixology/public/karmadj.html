@@ -22,11 +22,12 @@ main{max-width:1400px;margin:auto;padding:22px 18px 60px}.top{display:flex;justi
 <section class="center"><div class="now"><div class="eyebrow">KARMADJ ENGINE</div><div id="mixState" class="state">WAITING FOR TWO TRACKS</div><div id="beatPill" class="bigbpm">0 BPM</div><div class="beat"><i></i></div><div class="wave" id="wave"></div></div><div class="controls"><button class="btn primary" id="start">START AUTO MIX</button><button class="btn" id="pause">PAUSE</button><button class="btn" id="next">MIX NEXT</button><button class="btn danger" id="stop">STOP</button></div><div class="slider"><label><span>DECK A</span><span>CROSSFADER</span><span>DECK B</span></label><input id="crossfader" type="range" min="0" max="1" step=".01" value=".5"></div><div class="slider"><label><span>MASTER</span><strong id="masterValue">90%</strong></label><input id="master" type="range" min="0" max="1" step=".01" value=".9"></div><div class="grid2"><div class="field"><label>Transition</label><select id="bars"><option value="4">4 bars</option><option value="8" selected>8 bars</option><option value="16">16 bars</option><option value="32">32 bars</option></select></div><div class="field"><label>Tempo Sync</label><select id="sync"><option value="on">SYNC ON</option><option value="off">SYNC OFF</option></select></div></div><div class="hint">SMART DJ MODE: KARMADJ analyzes tracks, selects a compatible next track, beat-matches it, waits for a phrase boundary, mixes during the outro, swaps the bass with EQ-style control, and continuously builds the set.</div></section>
 <section class="panel"><div class="deckhead"><span class="decktag b">DECK B · INCOMING</span><span id="bpmPillB" class="pill">-- BPM</span></div><div class="track"><div id="nameB" class="trackname">No track loaded</div><div id="timeB" class="tracktime">00:00 / 00:00</div></div><div class="controls"><button class="btn" id="analyzeB">ANALYZE BPM</button><button class="btn" id="playB">PLAY</button><button class="btn" id="pauseB">PAUSE</button></div><div class="field"><label>BPM</label><input id="bpmB" type="number" min="50" max="220" step=".1" placeholder="120"></div><div class="meters"><span id="meterB"></span></div><div class="status" id="statusB">Choose a track from the R2 library.</div></section>
 </div>
-<section class="panel library"><div class="libraryhead"><div><div class="eyebrow">R2 MUSIC LIBRARY</div><strong id="libraryCount">Loading library…</strong></div><div class="upload"><label class="btn primary" for="upload">UPLOAD MUSIC</label><input id="upload" type="file" accept="audio/*" multiple><button class="btn" id="importZip">IMPORT ZIP</button><button class="btn" id="refresh">REFRESH</button></div></div><div id="library" class="librarygrid"></div></section>
+<section class="panel library"><div class="libraryhead"><div><div class="eyebrow">R2 MUSIC LIBRARY</div><strong id="libraryCount">Loading library…</strong></div><div class="upload"><label class="btn primary" for="upload">UPLOAD MUSIC</label><input id="upload" type="file" accept="audio/*" multiple><label class="btn" for="zipUpload">UPLOAD ZIP</label><input id="zipUpload" type="file" accept=".zip,application/zip"><button class="btn" id="importZip">IMPORT ZIP</button><button class="btn" id="refresh">REFRESH</button></div></div><div id="library" class="librarygrid"></div></section>
 </main><div class="notice" id="notice"></div>
 <script>
 (async()=>{
-const session=await fetch('/api/manage/session',{credentials:'include',cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+async function readJson(response){try{const text=await response.text();if(!text.trim())return null;try{return JSON.parse(text)}catch{return{message:text.slice(0,300)}}}catch{return null}}
+const sessionResponse=await fetch('/api/manage/session',{credentials:'include',cache:'no-store'}).catch(()=>null);const session=sessionResponse?await readJson(sessionResponse):null;
 if(!session?.authenticated){location.replace('/manage');return}
 const $=id=>document.getElementById(id);
 const S={ctx:null,A:null,B:null,graphA:null,graphB:null,masterGain:null,playing:false,transitioning:false,raf:0,library:[],meta:new Map(),history:[],scheduled:null};
@@ -80,7 +81,7 @@ async function ensureAnalysis(item){
  const meta=await analyzeUrl(item.url);S.meta.set(item.key,meta);return meta;
 }
 async function loadItem(item,key,{silent=false}={}){
- cleanupDeck(key);const a=new Audio();a.crossOrigin='anonymous';a.preload='auto';a.src=item.url;a.__key=item.key;a.__item=item;S[key]=a;S['graph'+key]=makeDeckGraph(a,key);
+ cleanupDeck(key);const a=new Audio();a.crossOrigin='anonymous';a.preload='auto';const safeUrl=new URL(item.url,location.origin).toString();a.src=safeUrl;a.__key=item.key;a.__item=item;S[key]=a;S['graph'+key]=makeDeckGraph(a,key);
  $('name'+key).textContent=item.name.replace(/\.[^.]+$/,'');$('meter'+key).style.width='0%';$('time'+key).textContent='00:00 / 00:00';
  if(!silent)status(key,'Loaded to Deck '+key+'. Analyzing when needed.');
  a.ontimeupdate=()=>{$('meter'+key).style.width=Math.min(100,(a.currentTime/(a.duration||1))*100)+'%';$('time'+key).textContent=timeText(a.currentTime)+' / '+timeText(a.duration)};
@@ -165,25 +166,28 @@ $('crossfader').oninput=e=>{const p=parseFloat(e.target.value);if(S.graphA)S.gra
 $('master').oninput=e=>{const p=parseFloat(e.target.value);$('masterValue').textContent=Math.round(p*100)+'%';if(S.masterGain)S.masterGain.gain.value=p};
 for(let i=0;i<150;i++){const x=document.createElement('i');x.className='bar';x.style.height=(8+Math.abs(Math.sin(i*.63))*58)+'%';$('wave').appendChild(x)}
 async function refresh(){
- const r=await fetch('/api/karmadj/music',{credentials:'include',cache:'no-store'}),data=await r.json();if(!r.ok)throw new Error(data.message||'Library request failed');S.library=data.items||[];$('libraryCount').textContent=S.library.length+' track'+(S.library.length===1?'':'s')+' in R2';
+ const r=await fetch('/api/karmadj/music',{credentials:'include',cache:'no-store'});const data=await readJson(r);if(!r.ok)throw new Error(data?.message||'Library request failed');S.library=data.items||[];$('libraryCount').textContent=S.library.length+' track'+(S.library.length===1?'':'s')+' in R2';
  const box=$('library');box.innerHTML='';if(!S.library.length){box.innerHTML='<div class="empty">No music uploaded yet. Upload tracks to build the KARMADJ set.</div>';return}
  S.library.forEach(item=>{const row=document.createElement('div');row.className='item',info=document.createElement('div');info.style.minWidth='0';info.innerHTML='<div class="itemname"></div><div class="itemmeta">'+(Math.round(item.size/1024/1024*10)/10)+' MB</div>';info.querySelector('.itemname').textContent=item.name;
   const actions=document.createElement('div');actions.className='itemactions';const a=document.createElement('button');a.className='mini';a.textContent='DECK A';a.onclick=()=>loadItem(item,'A');const b=document.createElement('button');b.className='mini';b.textContent='DECK B';b.onclick=()=>loadItem(item,'B');const d=document.createElement('button');d.className='mini';d.textContent='DELETE';
-  d.onclick=async()=>{if(!confirm('Delete '+item.name+' from KARMADJ R2?'))return;const rr=await fetch('/api/karmadj/music?key='+encodeURIComponent(item.key),{method:'DELETE',credentials:'include'});if(!rr.ok){const x=await rr.json().catch(()=>({}));notify(x.message||'Delete failed');return}S.meta.delete(item.key);await refresh()};actions.append(a,b,d);row.append(info,actions);box.appendChild(row)
+  d.onclick=async()=>{if(!confirm('Delete '+item.name+' from KARMADJ R2?'))return;const rr=await fetch('/api/karmadj/music?key='+encodeURIComponent(item.key),{method:'DELETE',credentials:'include'});if(!rr.ok){const x=await readJson(rr);notify(x?.message||'Delete failed');return}S.meta.delete(item.key);await refresh()};actions.append(a,b,d);row.append(info,actions);box.appendChild(row)
  })
 }
-$('importZip').onclick=async()=>{
- try{
-  notify('Importing latest ZIP from R2…');
-  const rr=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'import-zip'})});
-  const data=await rr.json().catch(()=>({}));
-  if(!rr.ok)throw new Error(data.message||'ZIP import failed');
-  notify('Imported '+data.imported+' audio track'+(data.imported===1?'':'s')+' into KARMADJ.');
-  await refresh();
- }catch(err){notify(err instanceof Error?err.message:'ZIP import failed')}
-};
+async function importZip(key){
+ const rr=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'import-zip',...(key?{key}: {})})});
+ const data=await readJson(rr);if(!rr.ok)throw new Error(data?.message||'ZIP import failed');
+ notify('Imported '+(data.imported||0)+' audio tracks into KARMADJ.');await refresh();
+}
+$('importZip').onclick=async()=>{try{notify('Importing ZIP from R2…');await importZip()}catch(err){notify(err instanceof Error?err.message:'ZIP import failed')}};
+$('zipUpload').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{
+ notify('Uploading '+file.name+' to R2…');
+ const p=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'presign-upload',filename:file.name,contentType:'application/zip',size:file.size})});
+ const data=await readJson(p);if(!p.ok)throw new Error(data?.message||'Could not prepare ZIP upload');if(!data?.url)throw new Error('R2 did not return an upload URL.');
+ const put=await fetch(new URL(data.url).toString(),{method:'PUT',headers:{'Content-Type':'application/zip'},body:file});if(!put.ok)throw new Error('R2 ZIP upload failed ('+put.status+').');
+ notify('ZIP uploaded. Importing…');await importZip(data.key);
+ }catch(err){notify(err instanceof Error?err.message:'ZIP upload failed')}};
 $('refresh').onclick=()=>refresh().catch(e=>notify(e.message));
-$('upload').onchange=async e=>{const files=[...e.target.files];for(const file of files){try{notify('Preparing '+file.name+'…');const p=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'presign-upload',filename:file.name,contentType:file.type,size:file.size})}),data=await p.json();if(!p.ok)throw new Error(data.message||'Could not prepare upload');const put=await fetch(data.url,{method:'PUT',headers:{'Content-Type':file.type||'audio/mpeg'},body:file});if(!put.ok)throw new Error('R2 upload failed ('+put.status+'). Check bucket CORS.')}catch(err){notify(err instanceof Error?err.message:'Upload failed');break}}e.target.value='';await refresh().catch(err=>notify(err.message))};
+$('upload').onchange=async e=>{const files=[...e.target.files];for(const file of files){try{notify('Preparing '+file.name+'…');const p=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'presign-upload',filename:file.name,contentType:file.type,size:file.size})}),data=await readJson(p);if(!p.ok)throw new Error(data?.message||'Could not prepare upload');const put=await fetch(data.url,{method:'PUT',headers:{'Content-Type':file.type||'audio/mpeg'},body:file});if(!put.ok)throw new Error('R2 upload failed ('+put.status+'). Check bucket CORS.')}catch(err){notify(err instanceof Error?err.message:'Upload failed');break}}e.target.value='';await refresh().catch(err=>notify(err.message))};
 try{await refresh()}catch(e){notify(e.message)}
 function loop(){
  if(S.playing&&S.A){const m=S.meta.get(S.A.__key),current=bpmValue('A');$('beatPill').textContent=Math.round(current)+' BPM';$('bpmPillA').textContent=Math.round(current)+' BPM';$('bpmPillB').textContent=S.B?Math.round(bpmValue('B'))+' BPM':'-- BPM';

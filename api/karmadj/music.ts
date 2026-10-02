@@ -155,7 +155,11 @@ export default async function handler(req: Req, res: Res) {
           });
           return;
         }
-        const requestedKey = typeof body.key === 'string' ? body.key : zips[0].Key!;
+        const requestedKey = typeof body.key === 'string' ? body.key.trim() : zips[0].Key!;
+        if (!requestedKey || !requestedKey.toLowerCase().endsWith('.zip') || requestedKey.includes('..')) {
+          json(res, 400, { message: 'Invalid ZIP key.' });
+          return;
+        }
         const zipObject = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: requestedKey }));
         const bytes = zipObject.Body && typeof zipObject.Body.transformToByteArray === 'function'
           ? await zipObject.Body.transformToByteArray()
@@ -194,11 +198,12 @@ export default async function handler(req: Req, res: Res) {
       }
 
       const filename = typeof body.filename === 'string' ? cleanName(body.filename) : 'track';
-      const contentType = typeof body.contentType === 'string' && body.contentType.startsWith('audio/')
-        ? body.contentType
-        : 'audio/mpeg';
+      const requestedType = typeof body.contentType === 'string' ? body.contentType : '';
+      const isZip = requestedType === 'application/zip' || filename.toLowerCase().endsWith('.zip');
+      const contentType = isZip ? 'application/zip' : requestedType.startsWith('audio/') ? requestedType : 'audio/mpeg';
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const key = `music/${stamp}-${crypto.randomUUID()}-${filename}`;
+      const prefix = isZip ? 'imports/' : 'music/';
+      const key = `${prefix}${stamp}-${crypto.randomUUID()}-${filename}`;
 
       const url = await getSignedUrl(s3, new PutObjectCommand({
         Bucket: bucket,
