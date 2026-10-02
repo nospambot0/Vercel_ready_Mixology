@@ -2111,6 +2111,8 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, onFind
 }
 
 function AgeGate() {
+  const [location] = useLocation();
+  const isStaffRoute = location === '/manage' || location.startsWith('/manage/');
   const [verified, setVerified] = useState<boolean | null>(() => {
     try {
       return localStorage.getItem('hillview-age-verified') === 'true';
@@ -2128,7 +2130,9 @@ function AgeGate() {
     setVerified(true);
   };
 
-  if (verified === true) return null;
+  // Staff/admin pages have their own authentication gate (password/OTP).
+  // Do not block staff navigation with the public 18+ modal.
+  if (isStaffRoute || verified === true) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-primary/95 px-5 py-8 text-primary-foreground backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
@@ -2227,19 +2231,17 @@ function App() {
   }, [catalog]);
 
   return (
-    <>
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AgeGate />
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-        <AppContent
+      <AppContent
           choice={choice}
           setChoice={setChoice}
           catalog={catalog}
           setCatalog={setCatalog}
           launch={launch}
           setLaunch={setLaunch}
-        />
-      </WouterRouter>
-    </>
+      />
+    </WouterRouter>
   );
 }
 
