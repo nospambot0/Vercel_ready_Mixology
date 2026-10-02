@@ -99,10 +99,10 @@ export default async function handler(req: Req, res: Res) {
     return;
   }
 
-  const bucket = env('R2_BUCKET_NAME');
-  const s3 = client();
-
   try {
+    const bucket = env('R2_BUCKET_NAME');
+    const s3 = client();
+
     if (req.method === 'GET') {
       const listed = await s3.send(new ListObjectsV2Command({
         Bucket: bucket,
