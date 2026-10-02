@@ -16,6 +16,10 @@ type Req = {
   query?: Record<string, string | string[] | undefined>;
 };
 
+type S3SendClient = {
+  send(command: unknown): Promise<any>;
+};
+
 type Res = {
   statusCode: number;
   setHeader(name: string, value: string | string[]): void;
@@ -59,7 +63,7 @@ function client() {
       secretAccessKey: env('R2_SECRET_ACCESS_KEY'),
     },
   };
-  return new S3Client(config);
+  return new S3Client(config) as unknown as S3SendClient;
 }
 
 function bodyOf(req: Req): Record<string, unknown> {
@@ -106,9 +110,9 @@ export default async function handler(req: Req, res: Res) {
       }));
 
       const items = await Promise.all((listed.Contents ?? [])
-        .filter((item) => item.Key && item.Size)
-        .sort((a, b) => String(a.Key).localeCompare(String(b.Key)))
-        .map(async (item) => ({
+        .filter((item: { Key?: string; Size?: number }) => item.Key && item.Size)
+        .sort((a: { Key?: string }, b: { Key?: string }) => String(a.Key).localeCompare(String(b.Key)))
+        .map(async (item: { Key?: string; Size?: number; LastModified?: Date }) => ({
           key: item.Key!,
           name: item.Key!.replace(/^music\//, ''),
           size: item.Size ?? 0,
