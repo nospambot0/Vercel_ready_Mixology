@@ -16,58 +16,171 @@ main{max-width:1400px;margin:auto;padding:22px 18px 60px}.top{display:flex;justi
 </head>
 <body>
 <main>
-<div class="top"><div><div class="eyebrow">STAFF MANAGEMENT / AUDIO LAB</div><h1 class="title">KARMADJ</h1><p class="muted">Private R2 music library + automatic two-deck mixer. Tracks are streamed with temporary signed URLs.</p></div><span class="beta">R2 CONNECTED</span></div>
+<div class="top"><div><div class="eyebrow">STAFF MANAGEMENT / AUDIO LAB</div><h1 class="title">KARMADJ</h1><p class="muted">Private R2 music library + intelligent two-deck DJ engine. Tracks are analyzed for tempo, beat grid, energy and transition points before mixing.</p></div><span class="beta">R2 CONNECTED</span></div>
 <div class="engine">
 <section class="panel"><div class="deckhead"><span class="decktag a">DECK A · OUTGOING</span><span id="bpmPillA" class="pill">-- BPM</span></div><div class="track"><div id="nameA" class="trackname">No track loaded</div><div id="timeA" class="tracktime">00:00 / 00:00</div></div><div class="controls"><button class="btn" id="analyzeA">ANALYZE BPM</button><button class="btn" id="playA">PLAY</button><button class="btn" id="pauseA">PAUSE</button></div><div class="field"><label>BPM</label><input id="bpmA" type="number" min="50" max="220" step=".1" placeholder="120"></div><div class="meters"><span id="meterA"></span></div><div class="status" id="statusA">Choose a track from the R2 library.</div></section>
-<section class="center"><div class="now"><div class="eyebrow">KARMADJ ENGINE</div><div id="mixState" class="state">WAITING FOR TWO TRACKS</div><div id="beatPill" class="bigbpm">0 BPM</div><div class="beat"><i></i></div><div class="wave" id="wave"></div></div><div class="controls"><button class="btn primary" id="start">START AUTO MIX</button><button class="btn" id="pause">PAUSE</button><button class="btn" id="next">MIX NEXT</button><button class="btn danger" id="stop">STOP</button></div><div class="slider"><label><span>DECK A</span><span>CROSSFADER</span><span>DECK B</span></label><input id="crossfader" type="range" min="0" max="1" step=".01" value=".5"></div><div class="slider"><label><span>MASTER</span><strong id="masterValue">90%</strong></label><input id="master" type="range" min="0" max="1" step=".01" value=".9"></div><div class="grid2"><div class="field"><label>Transition</label><select id="bars"><option value="4">4 bars</option><option value="8" selected>8 bars</option><option value="16">16 bars</option><option value="32">32 bars</option></select></div><div class="field"><label>Tempo Sync</label><select id="sync"><option value="on">SYNC ON</option><option value="off">SYNC OFF</option></select></div></div><div class="hint">Pick two library tracks. KARMADJ starts Deck A and automatically crossfades to Deck B, then continues alternating when a track finishes.</div></section>
+<section class="center"><div class="now"><div class="eyebrow">KARMADJ ENGINE</div><div id="mixState" class="state">WAITING FOR TWO TRACKS</div><div id="beatPill" class="bigbpm">0 BPM</div><div class="beat"><i></i></div><div class="wave" id="wave"></div></div><div class="controls"><button class="btn primary" id="start">START AUTO MIX</button><button class="btn" id="pause">PAUSE</button><button class="btn" id="next">MIX NEXT</button><button class="btn danger" id="stop">STOP</button></div><div class="slider"><label><span>DECK A</span><span>CROSSFADER</span><span>DECK B</span></label><input id="crossfader" type="range" min="0" max="1" step=".01" value=".5"></div><div class="slider"><label><span>MASTER</span><strong id="masterValue">90%</strong></label><input id="master" type="range" min="0" max="1" step=".01" value=".9"></div><div class="grid2"><div class="field"><label>Transition</label><select id="bars"><option value="4">4 bars</option><option value="8" selected>8 bars</option><option value="16">16 bars</option><option value="32">32 bars</option></select></div><div class="field"><label>Tempo Sync</label><select id="sync"><option value="on">SYNC ON</option><option value="off">SYNC OFF</option></select></div></div><div class="hint">SMART DJ MODE: KARMADJ analyzes tracks, selects a compatible next track, beat-matches it, waits for a phrase boundary, mixes during the outro, swaps the bass with EQ-style control, and continuously builds the set.</div></section>
 <section class="panel"><div class="deckhead"><span class="decktag b">DECK B · INCOMING</span><span id="bpmPillB" class="pill">-- BPM</span></div><div class="track"><div id="nameB" class="trackname">No track loaded</div><div id="timeB" class="tracktime">00:00 / 00:00</div></div><div class="controls"><button class="btn" id="analyzeB">ANALYZE BPM</button><button class="btn" id="playB">PLAY</button><button class="btn" id="pauseB">PAUSE</button></div><div class="field"><label>BPM</label><input id="bpmB" type="number" min="50" max="220" step=".1" placeholder="120"></div><div class="meters"><span id="meterB"></span></div><div class="status" id="statusB">Choose a track from the R2 library.</div></section>
 </div>
 <section class="panel library"><div class="libraryhead"><div><div class="eyebrow">R2 MUSIC LIBRARY</div><strong id="libraryCount">Loading library…</strong></div><div class="upload"><label class="btn primary" for="upload">UPLOAD MUSIC</label><input id="upload" type="file" accept="audio/*" multiple><button class="btn" id="refresh">REFRESH</button></div></div><div id="library" class="librarygrid"></div></section>
 </main><div class="notice" id="notice"></div>
 <script>
 (async()=>{
-const session=await fetch('/api/manage/session',{credentials:'include',cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);if(!session?.authenticated){location.replace('/manage');return}
+const session=await fetch('/api/manage/session',{credentials:'include',cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+if(!session?.authenticated){location.replace('/manage');return}
 const $=id=>document.getElementById(id);
-const S={ctx:null,A:null,B:null,gainA:null,gainB:null,masterGain:null,playing:false,transitioning:false,raf:0,library:[]};
-const notify=m=>{const n=$('notice');n.textContent=m;n.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>n.classList.remove('show'),3200)};
+const S={ctx:null,A:null,B:null,graphA:null,graphB:null,masterGain:null,playing:false,transitioning:false,raf:0,library:[],meta:new Map(),history:[],scheduled:null};
+const notify=m=>{const n=$('notice');n.textContent=m;n.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>n.classList.remove('show'),3600)};
 const ctx=()=>S.ctx||(S.ctx=new(window.AudioContext||window.webkitAudioContext)());
-function connect(key){const a=S[key];const c=ctx(),source=c.createMediaElementSource(a),gain=c.createGain();if(!S.masterGain){S.masterGain=c.createGain();S.masterGain.gain.value=.9;S.masterGain.connect(c.destination)}source.connect(gain).connect(S.masterGain);S['gain'+key]=gain;gain.gain.value=key==='A'?1:0;a.crossOrigin='anonymous'}
 function status(k,t){$('status'+k).textContent=t}
-function timeText(sec){const s=Math.floor(sec||0),m=Math.floor(s/60);return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
-async function loadItem(item,key){
-if(S[key]){S[key].pause();try{S[key].src=''}catch{}}
-const a=new Audio();a.crossOrigin='anonymous';a.preload='auto';a.src=item.url;S[key]=a;connect(key);
-$('name'+key).textContent=item.name.replace(/\.[^.]+$/,'');status(key,'R2 track loaded. Ready.');$('meter'+key).style.width='0%';
-a.ontimeupdate=()=>{$('meter'+key).style.width=Math.min(100,(a.currentTime/(a.duration||1))*100)+'%';$('time'+key).textContent=timeText(a.currentTime)+' / '+timeText(a.duration);};
-a.onerror=()=>status(key,'Could not stream this R2 object. Check R2 CORS settings.');
-a.onended=()=>{if(S.playing&&!S.transitioning)mixNext()};
+function timeText(sec){const s=Math.max(0,Math.floor(sec||0)),m=Math.floor(s/60);return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function bpmValue(k){return Math.max(50,Math.min(220,parseFloat($('bpm'+k).value)||120))}
+function beatLength(bpm){return 60/Math.max(1,bpm)}
+function barsSeconds(bpm,bars){return beatLength(bpm)*4*bars}
+function makeDeckGraph(a,key){
+ const c=ctx(),source=c.createMediaElementSource(a);
+ const low=c.createBiquadFilter();low.type='lowshelf';low.frequency.value=180;low.gain.value=0;
+ const high=c.createBiquadFilter();high.type='highshelf';high.frequency.value=5000;high.gain.value=0;
+ const gain=c.createGain();gain.gain.value=key==='A'?1:0;
+ source.connect(low).connect(high).connect(gain);
+ if(!S.masterGain){S.masterGain=c.createGain();S.masterGain.gain.value=parseFloat($('master').value)||.9;S.masterGain.connect(c.destination)}
+ gain.connect(S.masterGain);return{source,gain,low,high};
 }
-function bpm(k){return Math.max(50,Math.min(220,parseFloat($('bpm'+k).value)||120))}
-function beat(k){return 60/bpm(k)}
-function applySync(){if(!S.B)return;if($('sync').value==='off'){S.B.playbackRate=1;return}S.B.playbackRate=Math.max(.5,Math.min(2,bpm('A')/bpm('B')))}
-async function play(k){if(!S[k]){notify('Load Deck '+k+' from the library first.');return}const c=ctx();if(c.state==='suspended')await c.resume();applySync();await S[k].play()}
-async function analyze(k){
-const a=S[k];if(!a){notify('Load Deck '+k+' first.');return}status(k,'Analyzing BPM…');
-try{const data=await fetch(a.src).then(r=>r.arrayBuffer()),decoded=await ctx().decodeAudioData(data.slice(0)),ch=decoded.getChannelData(0),rate=decoded.sampleRate,step=Math.max(1,Math.floor(rate/200)),env=[];let prev=0;for(let i=0;i<ch.length;i+=step){const v=Math.abs(ch[i]-prev);prev=ch[i];env.push(v)}const sr=rate/step;let best={score:-1,bpm:120};for(let b=60;b<=180;b++){const lag=Math.max(1,Math.round(sr*60/b));let score=0;for(let i=lag;i<env.length;i+=2)score+=env[i]*env[i-lag];if(score>best.score)best={score,bpm:b}}$('bpm'+k).value=best.bpm;status(k,'Estimated BPM: '+best.bpm+' (beta analysis)')}catch{status(k,'BPM analysis failed. Enter BPM manually.')}}
-function phase(k){const a=S[k];if(!a)return 0;const bs=beat(k);return((a.currentTime%bs)+bs)%bs}
-async function mixNext(){
-if(S.transitioning||!S.A||!S.B){notify('Load both decks first.');return}S.transitioning=true;applySync();
-const outgoing=S.A,incoming=S.B,beatLen=beat('A'),bars=Math.max(1,Math.min(32,parseInt($('bars').value)||8)),duration=bars*4*beatLen,wait=Math.max(0,beatLen-phase('A'));
-setTimeout(async()=>{try{applySync();incoming.currentTime=0;await incoming.play();const start=performance.now(),from=S.gainA?.gain.value??1;const tick=()=>{const p=Math.min(1,(performance.now()-start)/Math.max(500,duration*1000));if(S.gainA)S.gainA.gain.value=from*(1-p);if(S.gainB)S.gainB.gain.value=p;if(p<1)requestAnimationFrame(tick);else{outgoing.pause();const oldA=S.A,oldGainA=S.gainA;S.A=incoming;S.B=outgoing;S.gainA=S.gainB;S.gainB=oldGainA;const nA=$('nameA').textContent,nB=$('nameB').textContent,tA=$('timeA').textContent,tB=$('timeB').textContent,bA=$('bpmA').value,bB=$('bpmB').value;$('nameA').textContent=nB;$('nameB').textContent=nA;$('timeA').textContent=tB;$('timeB').textContent=tA;$('bpmA').value=bB;$('bpmB').value=bA;S.transitioning=false}};requestAnimationFrame(tick)}catch{S.transitioning=false;notify('Could not start the incoming deck. Check R2 CORS.')}},wait*1000)
+function cleanupDeck(key){
+ const graph=S['graph'+key];if(graph){try{graph.source.disconnect()}catch{}try{graph.gain.disconnect()}catch{}try{graph.low.disconnect()}catch{}try{graph.high.disconnect()}catch{}}
+ const a=S[key];if(a){a.pause();try{a.src='';a.load()}catch{}}
 }
-async function start(){if(!S.A||!S.B){notify('Load one R2 track into each deck first.');return}S.playing=true;document.body.classList.add('running');$('mixState').textContent='AUTO MIX RUNNING';await play('A')}
-$('start').onclick=start;$('pause').onclick=()=>{S.playing=false;S.A?.pause();S.B?.pause();document.body.classList.remove('running');$('mixState').textContent='PAUSED'};$('next').onclick=mixNext;$('stop').onclick=()=>{S.playing=false;S.A?.pause();S.B?.pause();if(S.A)S.A.currentTime=0;if(S.B)S.B.currentTime=0;if(S.gainA)S.gainA.gain.value=1;if(S.gainB)S.gainB.gain.value=0;document.body.classList.remove('running');$('mixState').textContent='STOPPED'};
-$('playA').onclick=()=>play('A');$('playB').onclick=()=>play('B');$('pauseA').onclick=()=>S.A?.pause();$('pauseB').onclick=()=>S.B?.pause();$('analyzeA').onclick=()=>analyze('A');$('analyzeB').onclick=()=>analyze('B');$('bpmA').onchange=applySync;$('bpmB').onchange=applySync;
-$('crossfader').oninput=e=>{const p=parseFloat(e.target.value);if(S.gainA)S.gainA.gain.value=1-p;if(S.gainB)S.gainB.gain.value=p};
+function applyTempoSync(){
+ if(!S.A||!S.B)return;
+ if($('sync').value==='off'){S.B.playbackRate=1;return}
+ const rate=Math.max(.92,Math.min(1.08,bpmValue('A')/bpmValue('B')));S.B.playbackRate=rate;
+}
+function updateDeckUI(k){
+ const a=S[k],m=a?S.meta.get(a.__key):null;
+ if(a){$('bpm'+k).value=m?.bpm||$('bpm'+k).value||120;$('bpmPill'+k).textContent=Math.round(bpmValue(k))+' BPM';$('time'+k).textContent=timeText(a.currentTime)+' / '+timeText(a.duration)}
+}
+async function analyzeUrl(url){
+ const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('Audio analysis download failed ('+response.status+').');
+ const decoded=await ctx().decodeAudioData((await response.arrayBuffer()).slice(0)),channel=decoded.getChannelData(0),rate=decoded.sampleRate,frame=Math.max(256,Math.floor(rate*.25)),energies=[],onsets=[];let prev=0;
+ for(let i=0;i<channel.length;i+=frame){const end=Math.min(channel.length,i+frame);let sum=0,peak=0;for(let j=i;j<end;j+=4){const v=channel[j];sum+=v*v;peak=Math.max(peak,Math.abs(v))}const rms=Math.sqrt(sum/Math.max(1,Math.ceil((end-i)/4)));energies.push({t:i/rate,rms,peak});onsets.push(Math.max(0,rms-prev));prev=rms}
+ const maxE=Math.max(...energies.map(x=>x.rms),.0001),threshold=maxE*.035;let first=0,last=decoded.duration;
+ for(const e of energies)if(e.rms>threshold){first=e.t;break}
+ for(let i=energies.length-1;i>=0;i--)if(energies[i].rms>threshold){last=Math.min(decoded.duration,energies[i].t+.25);break}
+ let best={score:-Infinity,bpm:120};
+ for(let candidate=70;candidate<=170;candidate+=.5){const lag=Math.max(1,Math.round((60/candidate)*4)),limit=onsets.length;let score=0,count=0;for(let i=lag;i<limit;i++)if(i%2===0){score+=onsets[i]*onsets[i-lag];count++}score/=Math.max(1,count);if(score>best.score)best={score,bpm:candidate}}
+ const beat=60/best.bpm,audibleDuration=Math.max(30,last-first),introBeats=Math.min(32,Math.max(8,Math.floor(audibleDuration/beat))),introEnd=Math.min(last,first+introBeats*beat);
+ const outroBars=Math.min(16,Math.max(8,Math.floor((audibleDuration/beat)/4*.25))),outroStart=Math.max(first+16*beat,last-outroBars*4*beat);
+ const avg=(from,to)=>{const list=energies.filter(e=>e.t>=from&&e.t<=to);return list.length?list.reduce((s,e)=>s+e.rms,0)/list.length:0};
+ const energy=Math.min(1,avg(first,last)/maxE),peakEnergy=Math.min(1,Math.max(...energies.map(e=>e.rms))/maxE);
+ return{duration:decoded.duration,bpm:best.bpm,first,last,introEnd,outroStart,energy,peakEnergy};
+}
+async function ensureAnalysis(item){
+ if(S.meta.has(item.key))return S.meta.get(item.key);
+ const key=S.A?.__key===item.key?'A':'B';status(key,'Analyzing beat grid / phrase structure…');
+ const meta=await analyzeUrl(item.url);S.meta.set(item.key,meta);return meta;
+}
+async function loadItem(item,key,{silent=false}={}){
+ cleanupDeck(key);const a=new Audio();a.crossOrigin='anonymous';a.preload='auto';a.src=item.url;a.__key=item.key;a.__item=item;S[key]=a;S['graph'+key]=makeDeckGraph(a,key);
+ $('name'+key).textContent=item.name.replace(/\.[^.]+$/,'');$('meter'+key).style.width='0%';$('time'+key).textContent='00:00 / 00:00';
+ if(!silent)status(key,'Loaded to Deck '+key+'. Analyzing when needed.');
+ a.ontimeupdate=()=>{$('meter'+key).style.width=Math.min(100,(a.currentTime/(a.duration||1))*100)+'%';$('time'+key).textContent=timeText(a.currentTime)+' / '+timeText(a.duration)};
+ a.onloadedmetadata=()=>updateDeckUI(key);a.onerror=()=>status(key,'Could not stream this R2 object. Check R2 CORS settings.');a.onended=()=>{if(S.playing&&!S.transitioning)hardNext()};
+ try{const m=await ensureAnalysis(item);$('bpm'+key).value=m.bpm;$('bpmPill'+key).textContent=Math.round(m.bpm)+' BPM';status(key,'GRID READY · '+m.bpm.toFixed(1)+' BPM · intro '+timeText(m.introEnd-m.first)+' · outro '+timeText(m.last-m.outroStart))}catch{status(key,'Analysis unavailable; BPM can be entered manually.')}
+}
+function candidateScore(item,currentMeta){
+ const m=S.meta.get(item.key);if(!m||!currentMeta)return 0;
+ const diff=Math.abs(m.bpm-currentMeta.bpm),ratio=Math.min(m.bpm,currentMeta.bpm)/Math.max(m.bpm,currentMeta.bpm);
+ const tempo=Math.max(0,1-Math.min(diff,18)/18),ratioScore=Math.max(0,(ratio-.84)/.16),energy=1-Math.min(1,Math.abs(m.energy-currentMeta.energy)*2);
+ const recent=S.history.includes(item.key)?-1.2:0,same=item.key===S.A?.__key||item.key===S.B?.__key?-10:0,progress=(m.energy>=currentMeta.energy-.18&&m.energy<=currentMeta.energy+.28)?1:.2;
+ return tempo*4+ratioScore*3+energy*2+progress+recent+same;
+}
+async function chooseNext(){
+ if(!S.library.length)return null;const current=S.A?.__key?S.meta.get(S.A.__key):null;
+ if(!current){const first=S.library[0];await ensureAnalysis(first);return first}
+ const pool=[];for(const item of S.library){if(item.key===S.A?.__key||item.key===S.B?.__key)continue;try{await ensureAnalysis(item);pool.push(item)}catch{}}
+ if(!pool.length)return S.library.find(x=>x.key!==S.A?.__key)||S.library[0];
+ pool.sort((a,b)=>candidateScore(b,current)-candidateScore(a,current));return pool[0];
+}
+function equalPower(p){return{out:Math.cos(p*Math.PI/2),inc:Math.sin(p*Math.PI/2)}}
+async function prepareIncoming(){
+ let item=S.B?.__item;
+ if(!item||item.key===S.A?.__key){item=await chooseNext();if(!item)throw new Error('No compatible next track found.');await loadItem(item,'B',{silent:true})}else await ensureAnalysis(item);
+ const current=S.meta.get(S.A.__key),next=S.meta.get(S.B.__key);if(!current||!next)throw new Error('Track analysis is incomplete.');
+ const ratio=current.bpm/next.bpm;
+ if($('sync').value==='on'&&(ratio<.92||ratio>1.08)){const alt=await chooseNext();if(alt&&alt.key!==item.key)await loadItem(alt,'B',{silent:true})}
+ applyTempoSync();return S.meta.get(S.B.__key);
+}
+function nextBeatDelay(){
+ const m=S.meta.get(S.A.__key);if(!m)return 0;const beat=beatLength(bpmValue('A')),elapsed=Math.max(0,S.A.currentTime-m.first),toNext=beat-(elapsed%beat);return Math.max(.02,toNext);
+}
+async function performTransition(){
+ if(S.transitioning||!S.A)return;S.transitioning=true;
+ try{
+  const nextMeta=await prepareIncoming(),outgoing=S.A,incoming=S.B,bars=Math.max(4,Math.min(32,parseInt($('bars').value)||16)),duration=barsSeconds(bpmValue('A'),bars),delay=nextBeatDelay();
+  incoming.currentTime=Math.max(0,nextMeta.first);applyTempoSync();await new Promise(r=>setTimeout(r,delay*1000));if(!S.playing){S.transitioning=false;return}
+  await incoming.play();const started=performance.now(),startA=S.graphA,startB=S.graphB,gainOut=startA?.gain.gain.value??1,gainIn=startB?.gain.gain.value??0;
+  const finish=()=>{
+   outgoing.pause();if(startA){startA.gain.gain.value=0;startA.low.gain.value=0}if(startB){startB.gain.gain.value=1;startB.low.gain.value=0}
+   S.history.push(outgoing.__key);if(S.history.length>8)S.history.shift();
+   S.A=incoming;S.B=outgoing;S.graphA=startB;S.graphB=startA;
+   const swap=(x,y)=>{const t=$(x).textContent;$(x).textContent=$(y).textContent;$(y).textContent=t},swapVal=(x,y)=>{const t=$(x).value;$(x).value=$(y).value;$(y).value=t};
+   swap('nameA','nameB');swap('timeA','timeB');swap('statusA','statusB');swapVal('bpmA','bpmB');
+   $('bpmPillA').textContent=Math.round(bpmValue('A'))+' BPM';$('bpmPillB').textContent=Math.round(bpmValue('B'))+' BPM';S.transitioning=false;
+   status('B','STANDBY · selecting next compatible track…');if(S.playing)setTimeout(()=>primeStandby().catch(()=>{}),250);
+  };
+  const tick=()=>{
+   const p=Math.min(1,(performance.now()-started)/(duration*1000)),e=equalPower(p);
+   if(startA){startA.gain.gain.value=gainOut*e.out;startA.low.gain.value=-12*p;startA.high.gain.value=2*Math.sin(p*Math.PI)}
+   if(startB){startB.gain.gain.value=Math.max(gainIn,e.inc);startB.low.gain.value=-12+12*p;startB.high.gain.value=1.5*Math.sin(p*Math.PI)}
+   if(p<1)requestAnimationFrame(tick);else finish();
+  };requestAnimationFrame(tick);
+ }catch(e){S.transitioning=false;notify(e instanceof Error?e.message:'Transition failed.')}
+}
+async function primeStandby(){
+ if(!S.playing||!S.A)return;
+ if(!S.B||S.B.__key===S.A.__key){const item=await chooseNext();if(item)await loadItem(item,'B',{silent:true})}
+ if(S.B){const m=await ensureAnalysis(S.B.__item);$('bpmB').value=m.bpm;applyTempoSync();status('B','STANDBY · '+Math.round(m.bpm)+' BPM · phrase-aligned mix ready')}
+}
+async function hardNext(){if(S.playing)await performTransition()}
+async function start(){
+ if(!S.library.length){notify('Upload music to the R2 library first.');return}
+ try{
+  if(!S.A)await loadItem(S.library[0],'A');if(!S.B)await primeStandby();await ensureAnalysis(S.A.__item);
+  const c=ctx();if(c.state==='suspended')await c.resume();S.playing=true;document.body.classList.add('running');$('mixState').textContent='SMART AUTO DJ';
+  S.A.currentTime=S.meta.get(S.A.__key)?.first||0;if(S.graphA)S.graphA.gain.gain.value=1;if(S.graphB)S.graphB.gain.gain.value=0;await S.A.play();await primeStandby();
+ }catch(e){notify(e instanceof Error?e.message:'Could not start KARMADJ.')}
+}
+function stop(){
+ S.playing=false;S.transitioning=false;clearTimeout(S.scheduled);S.A?.pause();S.B?.pause();if(S.A)S.A.currentTime=0;if(S.B)S.B.currentTime=0;
+ if(S.graphA){S.graphA.gain.gain.value=1;S.graphA.low.gain.value=0}if(S.graphB){S.graphB.gain.gain.value=0;S.graphB.low.gain.value=0}
+ document.body.classList.remove('running');$('mixState').textContent='STOPPED';
+}
+$('start').onclick=start;$('pause').onclick=()=>{S.playing=false;S.A?.pause();S.B?.pause();document.body.classList.remove('running');$('mixState').textContent='PAUSED'};$('next').onclick=()=>performTransition();$('stop').onclick=stop;
+$('playA').onclick=async()=>{if(!S.A){notify('Load Deck A first.');return}await ctx().resume();await S.A.play()};$('playB').onclick=async()=>{if(!S.B){notify('Load Deck B first.');return}await ctx().resume();await S.B.play()};
+$('pauseA').onclick=()=>S.A?.pause();$('pauseB').onclick=()=>S.B?.pause();
+$('analyzeA').onclick=async()=>{if(!S.A){notify('Load Deck A first.');return}try{const m=await ensureAnalysis(S.A.__item);$('bpmA').value=m.bpm;status('A','GRID READY · '+m.bpm.toFixed(1)+' BPM · phrase-aware transition points calculated')}catch(e){notify(e.message)}};
+$('analyzeB').onclick=async()=>{if(!S.B){notify('Load Deck B first.');return}try{const m=await ensureAnalysis(S.B.__item);$('bpmB').value=m.bpm;applyTempoSync();status('B','GRID READY · '+m.bpm.toFixed(1)+' BPM · phrase-aware transition points calculated')}catch(e){notify(e.message)}};
+$('bpmA').onchange=()=>{if(S.A?.__key&&S.meta.get(S.A.__key))S.meta.get(S.A.__key).bpm=bpmValue('A');applyTempoSync()};$('bpmB').onchange=()=>{if(S.B?.__key&&S.meta.get(S.B.__key))S.meta.get(S.B.__key).bpm=bpmValue('B');applyTempoSync()};$('sync').onchange=applyTempoSync;
+$('crossfader').oninput=e=>{const p=parseFloat(e.target.value);if(S.graphA)S.graphA.gain.gain.value=Math.cos(p*Math.PI/2);if(S.graphB)S.graphB.gain.gain.value=Math.sin(p*Math.PI/2)};
 $('master').oninput=e=>{const p=parseFloat(e.target.value);$('masterValue').textContent=Math.round(p*100)+'%';if(S.masterGain)S.masterGain.gain.value=p};
 for(let i=0;i<150;i++){const x=document.createElement('i');x.className='bar';x.style.height=(8+Math.abs(Math.sin(i*.63))*58)+'%';$('wave').appendChild(x)}
 async function refresh(){
-const r=await fetch('/api/karmadj/music',{credentials:'include',cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.message||'Library request failed');S.library=data.items||[];$('libraryCount').textContent=S.library.length+' track'+(S.library.length===1?'':'s')+' in R2';const box=$('library');box.innerHTML='';if(!S.library.length){box.innerHTML='<div class="empty">No music uploaded yet. Upload your first track to the private KARMADJ R2 bucket.</div>';return}S.library.forEach(item=>{const row=document.createElement('div');row.className='item';const info=document.createElement('div');info.style.minWidth='0';info.innerHTML='<div class="itemname"></div><div class="itemmeta">'+(Math.round(item.size/1024/1024*10)/10)+' MB</div>';info.querySelector('.itemname').textContent=item.name;const actions=document.createElement('div');actions.className='itemactions';const a=document.createElement('button');a.className='mini';a.textContent='DECK A';a.onclick=()=>loadItem(item,'A');const b=document.createElement('button');b.className='mini';b.textContent='DECK B';b.onclick=()=>loadItem(item,'B');const d=document.createElement('button');d.className='mini';d.textContent='DELETE';d.onclick=async()=>{if(!confirm('Delete '+item.name+' from KARMADJ R2?'))return;const rr=await fetch('/api/karmadj/music?key='+encodeURIComponent(item.key),{method:'DELETE',credentials:'include'});if(!rr.ok){const x=await rr.json().catch(()=>({}));notify(x.message||'Delete failed');return}await refresh()};actions.append(a,b,d);row.append(info,actions);box.appendChild(row)})}
+ const r=await fetch('/api/karmadj/music',{credentials:'include',cache:'no-store'}),data=await r.json();if(!r.ok)throw new Error(data.message||'Library request failed');S.library=data.items||[];$('libraryCount').textContent=S.library.length+' track'+(S.library.length===1?'':'s')+' in R2';
+ const box=$('library');box.innerHTML='';if(!S.library.length){box.innerHTML='<div class="empty">No music uploaded yet. Upload tracks to build the KARMADJ set.</div>';return}
+ S.library.forEach(item=>{const row=document.createElement('div');row.className='item',info=document.createElement('div');info.style.minWidth='0';info.innerHTML='<div class="itemname"></div><div class="itemmeta">'+(Math.round(item.size/1024/1024*10)/10)+' MB</div>';info.querySelector('.itemname').textContent=item.name;
+  const actions=document.createElement('div');actions.className='itemactions';const a=document.createElement('button');a.className='mini';a.textContent='DECK A';a.onclick=()=>loadItem(item,'A');const b=document.createElement('button');b.className='mini';b.textContent='DECK B';b.onclick=()=>loadItem(item,'B');const d=document.createElement('button');d.className='mini';d.textContent='DELETE';
+  d.onclick=async()=>{if(!confirm('Delete '+item.name+' from KARMADJ R2?'))return;const rr=await fetch('/api/karmadj/music?key='+encodeURIComponent(item.key),{method:'DELETE',credentials:'include'});if(!rr.ok){const x=await rr.json().catch(()=>({}));notify(x.message||'Delete failed');return}S.meta.delete(item.key);await refresh()};actions.append(a,b,d);row.append(info,actions);box.appendChild(row)
+ })
+}
 $('refresh').onclick=()=>refresh().catch(e=>notify(e.message));
-$('upload').onchange=async e=>{const files=[...e.target.files];for(const file of files){try{notify('Preparing '+file.name+'…');const p=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'presign-upload',filename:file.name,contentType:file.type,size:file.size})});const data=await p.json();if(!p.ok)throw new Error(data.message||'Could not prepare upload');const put=await fetch(data.url,{method:'PUT',headers:{'Content-Type':file.type||'audio/mpeg'},body:file});if(!put.ok)throw new Error('R2 upload failed ('+put.status+'). Check bucket CORS.')}catch(err){notify(err instanceof Error?err.message:'Upload failed');break}}e.target.value='';await refresh().catch(err=>notify(err.message))};
+$('upload').onchange=async e=>{const files=[...e.target.files];for(const file of files){try{notify('Preparing '+file.name+'…');const p=await fetch('/api/karmadj/music',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'presign-upload',filename:file.name,contentType:file.type,size:file.size})}),data=await p.json();if(!p.ok)throw new Error(data.message||'Could not prepare upload');const put=await fetch(data.url,{method:'PUT',headers:{'Content-Type':file.type||'audio/mpeg'},body:file});if(!put.ok)throw new Error('R2 upload failed ('+put.status+'). Check bucket CORS.')}catch(err){notify(err instanceof Error?err.message:'Upload failed');break}}e.target.value='';await refresh().catch(err=>notify(err.message))};
 try{await refresh()}catch(e){notify(e.message)}
-function loop(){if(S.playing&&S.A){$('beatPill').textContent=Math.round(bpm('A'))+' BPM';$('bpmPillA').textContent=Math.round(bpm('A'))+' BPM';$('bpmPillB').textContent=Math.round(bpm('B'))+' BPM'}S.raf=requestAnimationFrame(loop)}loop();
-addEventListener('beforeunload',()=>cancelAnimationFrame(S.raf));
+function loop(){
+ if(S.playing&&S.A){const m=S.meta.get(S.A.__key),current=bpmValue('A');$('beatPill').textContent=Math.round(current)+' BPM';$('bpmPillA').textContent=Math.round(current)+' BPM';$('bpmPillB').textContent=S.B?Math.round(bpmValue('B'))+' BPM':'-- BPM';
+  if(m&&!S.transitioning&&S.B){const remaining=Math.max(0,(m.last||S.A.duration)-S.A.currentTime),transitionBars=Math.max(4,Math.min(32,parseInt($('bars').value)||16)),window=barsSeconds(current,transitionBars),outroLead=Math.max(window,m.outroStart?m.last-m.outroStart:window);if(remaining<=outroLead+.5)performTransition();$('mixState').textContent=remaining<=outroLead+.5?'PHRASE MIX IN PROGRESS':'PLAYING · NEXT TRACK ARMED'}
+ }S.raf=requestAnimationFrame(loop)
+}
+loop();addEventListener('beforeunload',()=>cancelAnimationFrame(S.raf));
 })();
 </script>
 </body></html>
