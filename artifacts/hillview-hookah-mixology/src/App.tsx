@@ -1447,21 +1447,25 @@ function DJPage() {
     };
   }, []);
 
-  const addStaffSong = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const addStaffSong = async (playNow: boolean) => {
     setNotice('');
     const trimmed = staffUrl.trim();
     if (!extractYouTubeId(trimmed)) { setNotice('Paste a valid YouTube song link.'); return; }
     setStaffAdding(true);
     try {
-      const response = await fetch('/api/dj/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: trimmed, requesterName: staffRequesterName.trim() || 'Staff' }) });
+      const response = await fetch('/api/dj/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ url: trimmed, requesterName: staffRequesterName.trim() || 'Staff', playNow }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not add that song.');
       setStaffUrl('');
-      setNotice('Song added to the queue by staff.');
+      setNotice(playNow ? 'Playing now — the current song was moved back into the queue.' : 'Song added to the queue by staff.');
       await loadQueue();
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not add that song.'); }
     finally { setStaffAdding(false); }
+  };
+
+  const addStaffSongToQueue = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await addStaffSong(false);
   };
 
   const addAutoSongs = async (mode: 'afro-bollywood' | 'cafe-ambient' | 'latest-bollywood') => {
@@ -1663,11 +1667,11 @@ function DJPage() {
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
-            <form onSubmit={addStaffSong} className="mb-6 rounded-2xl border border-border/70 bg-background/40 p-4">
+            <form onSubmit={addStaffSongToQueue} className="mb-6 rounded-2xl border border-border/70 bg-background/40 p-4">
               <SectionEyebrow>STAFF ADD</SectionEyebrow><h3 className="hv-display text-2xl">Add song to queue</h3>
               <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Add a YouTube request directly from the Manage DJ page.</p>
               <input type="text" value={staffRequesterName} onChange={(event) => setStaffRequesterName(event.target.value)} placeholder="Staff name (optional)" maxLength={80} className="mt-4 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" />
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row"><input type="url" required value={staffUrl} onChange={(event) => setStaffUrl(event.target.value)} placeholder="Paste YouTube song link…" className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" /><button type="submit" disabled={staffAdding} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"><Plus size={15} /> {staffAdding ? 'Adding…' : 'Add Queue'}</button></div>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row"><input type="url" required value={staffUrl} onChange={(event) => setStaffUrl(event.target.value)} placeholder="Paste YouTube song link…" className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" /><button type="submit" disabled={staffAdding} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"><Plus size={15} /> {staffAdding ? 'Adding…' : 'Add Queue'}</button><button type="button" disabled={staffAdding} onClick={() => void addStaffSong(true)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-secondary px-4 text-xs font-black text-secondary-foreground disabled:opacity-50"><Play size={15} /> {staffAdding ? 'Working…' : 'Play Now'}</button></div>
             </form>
             <div className="mb-6 rounded-2xl border border-secondary/20 bg-secondary/5 p-4">
               <SectionEyebrow>AUTO DJ</SectionEyebrow>
