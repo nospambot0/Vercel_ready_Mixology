@@ -1391,6 +1391,7 @@ function DJPage() {
   const [autoAdding, setAutoAdding] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [advPlaying, setAdvPlaying] = useState(false);
+  const [hkvPlaying, setHkvPlaying] = useState(false);
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -1501,6 +1502,85 @@ function DJPage() {
         }
       } catch { finish(); }
     }, 400);
+  };
+
+  const playHkvAnnouncement = () => {
+    if (hkvPlaying) return;
+    setHkvPlaying(true);
+
+    let previousVolume: number | null = null;
+    let ducked = false;
+    const duckYouTube = () => {
+      try {
+        if (!playerRef.current?.setVolume) return;
+        if (previousVolume === null && playerRef.current.getVolume) {
+          const currentVolume = Number(playerRef.current.getVolume());
+          if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
+        }
+        if (previousVolume !== null) {
+          playerRef.current.setVolume(Math.max(0, Math.round(previousVolume * 0.35)));
+          ducked = true;
+        }
+      } catch {}
+    };
+    const finish = () => {
+      if (ducked) {
+        try {
+          if (playerRef.current?.setVolume && previousVolume !== null) playerRef.current.setVolume(previousVolume);
+        } catch {}
+      }
+      setHkvPlaying(false);
+    };
+
+    duckYouTube();
+
+    window.setTimeout(() => {
+      try {
+        let spoken = false;
+        const speak = () => {
+          if (spoken) return;
+          spoken = true;
+          window.speechSynthesis.removeEventListener('voiceschanged', speak);
+          duckYouTube();
+
+          const voices = window.speechSynthesis.getVoices();
+          const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
+          const voice =
+            voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
+            voices.find((item) => femaleNames.test(item.name)) ||
+            voices.find((item) => /^en-IN/i.test(item.lang)) ||
+            voices.find((item) => /^en-GB/i.test(item.lang)) ||
+            voices.find((item) => /^en-US/i.test(item.lang)) ||
+            voices[0];
+
+          const utterance = new SpeechSynthesisUtterance(
+            'Hillview serves authentic Turkish hookah, starting at five hundred rupees. Reach out to Hookah Staff now!'
+          );
+          if (voice) utterance.voice = voice;
+          utterance.lang = voice?.lang || 'en-IN';
+          utterance.rate = 0.84;
+          utterance.pitch = 1.14;
+          utterance.volume = 1;
+          utterance.onend = finish;
+          utterance.onerror = finish;
+          window.speechSynthesis.speak(utterance);
+        };
+
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length) {
+          speak();
+        } else {
+          window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+          window.setTimeout(() => {
+            if (!spoken) speak();
+          }, 700);
+        }
+      } catch {
+        finish();
+      }
+    }, 250);
   };
 
   const advStartedAtRef = useRef(Date.now());
@@ -1850,7 +1930,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={playHkvAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
