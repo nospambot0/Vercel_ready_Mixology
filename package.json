@@ -3,17 +3,17 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck"
   },
   "private": true,
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3",
     "@neondatabase/serverless": "^1.0.2",
-    "@aws-sdk/client-s3": "^3.1144.0",
-    "@aws-sdk/s3-request-presigner": "^3.1144.0"
+    "@aws-sdk/client-s3": "3.1143.0",
+    "@aws-sdk/s3-request-presigner": "3.1143.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
