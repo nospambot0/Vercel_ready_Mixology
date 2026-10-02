@@ -1,11 +1,12 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   type S3ClientConfig,
 } from '@aws-sdk/client-s3';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { unzipSync } from 'fflate';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { isValidSession } from '../manage/_auth';
 
@@ -131,6 +132,62 @@ export default async function handler(req: Req, res: Res) {
     if (req.method === 'POST') {
       const body = bodyOf(req);
       const action = typeof body.action === 'string' ? body.action : '';
+
+      if (action === 'import-zip') {
+        const listed = await s3.send(new ListObjectsV2Command({
+          Bucket: bucket,
+          MaxKeys: 500,
+        }));
+        const zips = (listed.Contents ?? [])
+          .filter((item: { Key?: string }) => item.Key && item.Key.toLowerCase().endsWith('.zip'))
+          .sort((a: { LastModified?: Date }, b: { LastModified?: Date }) =>
+            Number(b.LastModified ?? 0) - Number(a.LastModified ?? 0));
+        if (!zips.length) {
+          json(res, 404, { message: 'No ZIP archive found in the KARMADJ R2 bucket.' });
+          return;
+        }
+        if (zips.length > 1 && typeof body.key !== 'string') {
+          json(res, 409, {
+            message: 'Multiple ZIP archives found. Supply the ZIP key to import.',
+            archives: zips.map((x: { Key?: string; Size?: number; LastModified?: Date }) => ({
+              key: x.Key, size: x.Size ?? 0, updatedAt: x.LastModified?.toISOString() ?? null
+            }))
+          });
+          return;
+        }
+        const requestedKey = typeof body.key === 'string' ? body.key : zips[0].Key!;
+        const zipObject = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: requestedKey }));
+        const bytes = zipObject.Body && typeof zipObject.Body.transformToByteArray === 'function'
+          ? await zipObject.Body.transformToByteArray()
+          : new Uint8Array(await new Response(zipObject.Body as any).arrayBuffer());
+        const files = unzipSync(bytes);
+        const audioExt = /\.(mp3|m4a|aac|wav|ogg|oga|flac|webm)$/i;
+        const archiveName = requestedKey.split('/').pop()?.replace(/\.zip$/i, '') || 'Imported Pack';
+        let imported = 0;
+        for (const [name, data] of Object.entries(files)) {
+          if (!audioExt.test(name) || name.endsWith('/')) continue;
+          const filename = cleanName(name);
+          const ext = filename.match(/\.[^.]+$/)?.[0]?.toLowerCase() || '.mp3';
+          const contentType = ext === '.mp3' ? 'audio/mpeg'
+            : ext === '.wav' ? 'audio/wav'
+            : ext === '.ogg' || ext === '.oga' ? 'audio/ogg'
+            : ext === '.webm' ? 'audio/webm'
+            : ext === '.flac' ? 'audio/flac'
+            : ext === '.aac' ? 'audio/aac'
+            : 'audio/mp4';
+          const key = `music/${cleanName(archiveName)}/${filename}`;
+          await s3.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: data,
+            ContentType: contentType,
+          }));
+          imported++;
+        }
+        json(res, 200, { imported, archive: requestedKey });
+        return;
+      }
+
       if (action !== 'presign-upload') {
         json(res, 400, { message: 'Unknown action.' });
         return;

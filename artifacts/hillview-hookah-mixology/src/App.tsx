@@ -1854,6 +1854,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
     if (location === '/manage/pos') return <PosPage />;
     if (location === '/manage/dj') return <DJPage />;
+    if (location === '/manage/karmadj') return <iframe title="KARMADJ" src="/karmadj.html" className="fixed inset-0 h-screen w-screen border-0 bg-black" allow="autoplay" />;
     if (location === '/manage/access-emails') return <AccessEmailsPage />;
     return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
   }
