@@ -1544,6 +1544,7 @@ function DJPage() {
       spoken = true;
       try {
         window.speechSynthesis.cancel();
+        if (window.speechSynthesis.resume) window.speechSynthesis.resume();
         duckYouTube();
 
         const voices = window.speechSynthesis.getVoices();
@@ -1569,11 +1570,7 @@ function DJPage() {
         utterance.onend = finish;
         utterance.onerror = finish;
         window.speechSynthesis.speak(utterance);
-
-        // Prevent a stuck HKV state if a browser speech engine silently fails.
-        fallbackTimer = window.setTimeout(() => {
-          if (hkvPlaying) finish();
-        }, 12000);
+        fallbackTimer = window.setTimeout(() => finish(), 12000);
       } catch {
         finish();
       }
@@ -1592,11 +1589,44 @@ function DJPage() {
       speak();
     }
   };
-
   const advStartedAtRef = useRef(Date.now());
   const lastAdvTriggerIdRef = useRef<string | null>(null);
   const lastAdvTriggerAtRef = useRef(0);
   const advPollInFlightRef = useRef(false);
+  const hkvStartedAtRef = useRef(Date.now());
+  const lastHkvTriggerIdRef = useRef<string | null>(null);
+  const lastHkvTriggerAtRef = useRef(0);
+  const hkvPollInFlightRef = useRef(false);
+
+  const checkHkvTrigger = async () => {
+    if (hkvPollInFlightRef.current) return;
+    hkvPollInFlightRef.current = true;
+    try {
+      const response = await fetch(`/api/dj/hkv?ts=${Date.now()}`, {
+        cache: 'no-store',
+        credentials: 'include',
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const trigger = data.trigger as { id?: string; createdAt?: string } | null;
+      if (!trigger?.id || trigger.id === lastHkvTriggerIdRef.current) return;
+
+      const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
+      lastHkvTriggerIdRef.current = trigger.id;
+      if (!createdAt || createdAt <= lastHkvTriggerAtRef.current) return;
+      lastHkvTriggerAtRef.current = createdAt;
+      if (createdAt < hkvStartedAtRef.current - 1500) return;
+
+      try {
+        if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume();
+      } catch {}
+      playHkvAnnouncement();
+    } catch {
+      // Keep polling through transient network/database errors.
+    } finally {
+      hkvPollInFlightRef.current = false;
+    }
+  };
 
   const checkAdvTrigger = async () => {
     if (advPollInFlightRef.current) return;
@@ -1649,7 +1679,29 @@ function DJPage() {
     }
   };
 
+  const triggerHkvForAllStaffTabs = async () => {
+    playHkvAnnouncement();
+    try {
+      const response = await fetch('/api/dj/hkv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('HKV broadcast failed');
+      const data = await response.json().catch(() => ({}));
+      if (data.id) lastHkvTriggerIdRef.current = String(data.id);
+    } catch {
+      setNotice('HKV played here, but the staff-device broadcast could not be sent.');
+    }
+  };
+
   useEffect(() => {
+    // Poll HKV independently so remote staff devices receive the announcement.
+    void checkHkvTrigger();
+    const hkvTimer = window.setInterval(() => void checkHkvTrigger(), 750);
+
     // Poll independently from the queue so ADV delivery is not delayed by queue
     // requests or another slow network call.
     void checkAdvTrigger();
@@ -1660,6 +1712,7 @@ function DJPage() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       window.clearInterval(timer);
+      window.clearInterval(hkvTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
@@ -1940,7 +1993,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={playHkvAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
