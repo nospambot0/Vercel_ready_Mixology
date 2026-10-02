@@ -86,6 +86,79 @@ async function ensureTable(sql: any) {
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
 }
 
+
+
+type AutoMode = 'afro-bollywood' | 'cafe-ambient' | 'latest-bollywood';
+
+function autoModeQuery(mode: AutoMode): string {
+  if (mode === 'afro-bollywood') return 'Afro Bollywood mix 2026';
+  if (mode === 'cafe-ambient') return 'cafe ambient music chillout mix';
+  return 'latest Bollywood songs 2026 official';
+}
+
+async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; title: string }>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+  try {
+    const query = encodeURIComponent(autoModeQuery(mode));
+    const response = await fetch(\`https://www.youtube.com/results?search_query=\${query}\`, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    if (!response.ok) throw new Error('YouTube search is temporarily unavailable.');
+    const html = await response.text();
+    const results: Array<{ videoId: string; title: string }> = [];
+    const seen = new Set<string>();
+    const rendererRe = /"videoRenderer":\{([\s\S]*?)\}\s*,\s*"trackingParams"/g;
+    let match: RegExpExecArray | null;
+    while ((match = rendererRe.exec(html)) && results.length < 30) {
+      const block = match[1];
+      const idMatch = block.match(/"videoId":"([A-Za-z0-9_-]{11})"/);
+      const titleMatch = block.match(/"title":\{"runs":\[\{"text":"((?:\\.|[^"\\])*)"/);
+      if (!idMatch || !titleMatch) continue;
+      let title = titleMatch[1];
+      try { title = JSON.parse('"' + title + '"'); } catch {}
+      title = title.replace(/\\u[\dA-Fa-f]{4}/g, '').trim();
+      if (!title || seen.has(idMatch[1]) || looksDisturbing(title)) continue;
+      seen.add(idMatch[1]);
+      results.push({ videoId: idMatch[1], title: title.slice(0, 300) });
+    }
+    return results;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function addAutoTracks(sql: any, mode: AutoMode): Promise<{ added: number; skipped: number; titles: string[] }> {
+  const candidates = await searchYouTube(mode);
+  const target = candidates.slice(0, 20);
+  const titles: string[] = [];
+  let added = 0;
+  let skipped = 0;
+  for (const track of target) {
+    if (added >= 10) break;
+    const normalized = \`https://www.youtube.com/watch?v=\${track.videoId}\`;
+    const duplicate = mode === 'latest-bollywood'
+      ? await sql\`SELECT id FROM dj_queue WHERE url = \${normalized} AND created_at > NOW() - INTERVAL '60 minutes' LIMIT 1\`
+      : await sql\`SELECT id FROM dj_queue WHERE url = \${normalized} AND status IN ('queued','playing') LIMIT 1\`;
+    if (duplicate.length) {
+      skipped++;
+      continue;
+    }
+    const countRows = await sql\`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')\`;
+    if ((countRows[0]?.count ?? 0) >= 100) break;
+    const id = randomUUID();
+    await sql\`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at)
+      VALUES (\${id}, 'youtube', \${normalized}, \${track.title}, 'Auto DJ', NULL, 'queued', NOW())\`;
+    titles.push(track.title);
+    added++;
+  }
+  return { added, skipped, titles };
+}
+
 export default async function handler(req: any, res: any): Promise<void> {
   try {
     const sql = db();
@@ -108,6 +181,16 @@ export default async function handler(req: any, res: any): Promise<void> {
     }
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {});
+      const autoMode = body.autoMode as AutoMode | undefined;
+      if (autoMode && ['afro-bollywood', 'cafe-ambient', 'latest-bollywood'].includes(autoMode)) {
+        const result = await addAutoTracks(sql, autoMode);
+        if (result.added === 0) {
+          json(res, 503, { error: 'Could not find enough suitable YouTube tracks right now.', ...result });
+          return;
+        }
+        json(res, 201, { ...result, mode: autoMode });
+        return;
+      }
       const raw = typeof body.url === 'string' ? body.url.trim() : '';
       const requesterName = typeof body.requesterName === 'string' ? body.requesterName.trim().slice(0, 80) : '';
       const requesterUrlRaw = typeof body.requesterUrl === 'string' ? body.requesterUrl.trim().slice(0, 500) : '';

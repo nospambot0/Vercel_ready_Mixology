@@ -1291,6 +1291,7 @@ function DJPage() {
   const [staffUrl, setStaffUrl] = useState('');
   const [staffRequesterName, setStaffRequesterName] = useState('Staff');
   const [staffAdding, setStaffAdding] = useState(false);
+  const [autoAdding, setAutoAdding] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
@@ -1364,6 +1365,28 @@ function DJPage() {
       await loadQueue();
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not add that song.'); }
     finally { setStaffAdding(false); }
+  };
+
+  const addAutoSongs = async (mode: 'afro-bollywood' | 'cafe-ambient' | 'latest-bollywood') => {
+    setAutoAdding(mode);
+    setNotice('');
+    try {
+      const response = await fetch('/api/dj/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ autoMode: mode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not load automatic DJ tracks.');
+      const label = mode === 'afro-bollywood' ? 'Afro Bollywood' : mode === 'cafe-ambient' ? 'Cafe Ambient' : 'Latest Bollywood';
+      setNotice(`${label}: added ${data.added ?? 0} songs to the queue.`);
+      await loadQueue();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Automatic DJ selection failed.');
+    } finally {
+      setAutoAdding(null);
+    }
   };
 
   const control = async (action: string, id?: string) => {
@@ -1541,6 +1564,16 @@ function DJPage() {
               <input type="text" value={staffRequesterName} onChange={(event) => setStaffRequesterName(event.target.value)} placeholder="Staff name (optional)" maxLength={80} className="mt-4 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" />
               <div className="mt-2 flex flex-col gap-2 sm:flex-row"><input type="url" required value={staffUrl} onChange={(event) => setStaffUrl(event.target.value)} placeholder="Paste YouTube song link…" className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" /><button type="submit" disabled={staffAdding} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"><Plus size={15} /> {staffAdding ? 'Adding…' : 'Add Queue'}</button></div>
             </form>
+            <div className="mb-6 rounded-2xl border border-secondary/20 bg-secondary/5 p-4">
+              <SectionEyebrow>AUTO DJ</SectionEyebrow>
+              <h3 className="hv-display text-2xl">Quick playlists</h3>
+              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Add 10 YouTube tracks automatically. Latest Bollywood tracks are not repeated within 60 minutes.</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('afro-bollywood')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'afro-bollywood' ? 'Loading…' : 'Afro Bollywood'}</button>
+                <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('cafe-ambient')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-xs font-bold hover:bg-muted disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'cafe-ambient' ? 'Loading…' : 'Cafe Ambient'}</button>
+                <button type="button" disabled={!!autoAdding} onClick={() => void addAutoSongs('latest-bollywood')} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-secondary/40 bg-secondary/10 px-3 text-xs font-bold hover:bg-secondary/20 disabled:opacity-50"><Music2 size={15} /> {autoAdding === 'latest-bollywood' ? 'Loading…' : 'Latest Bollywood'}</button>
+              </div>
+            </div>
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>SHARED QUEUE</SectionEyebrow><h2 className="hv-display text-3xl">Up next</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{queue.length}</span></div>
             <div className="mt-5 space-y-2">
               {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p> : queue.length === 0 ? <p className="rounded-2xl border border-dashed border-border p-7 text-center text-sm text-muted-foreground">No requests yet.</p> :
