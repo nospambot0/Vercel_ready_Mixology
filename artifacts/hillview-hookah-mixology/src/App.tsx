@@ -1809,7 +1809,7 @@ function DJPage() {
         {notice && <div className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-xs font-semibold text-destructive" role="alert">{notice}</div>}
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
-            <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{current?.title || 'No song selected'}</h2></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
+            <div className="flex items-center justify-between gap-3"><div className="min-w-0"><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{current?.title || 'No song selected'}</h2>{current && <p className="mt-2 text-xs font-semibold text-muted-foreground">Requested by <span className="text-foreground">{current.requesterName || 'Guest'}</span></p>}</div><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
