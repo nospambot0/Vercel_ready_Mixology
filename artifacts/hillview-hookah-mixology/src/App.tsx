@@ -1533,7 +1533,14 @@ function DJPage() {
     try { void audioContextRef.current?.close(); } catch {}
   }, []);
 
-  const clearQueue = async () => {\n    if (!queue.length) { setNotice('The queue is already empty.'); return; }\n    if (!window.confirm('Clear all ' + queue.length + ' queued songs? The currently playing song will not be stopped.')) return;\n    await control('clear-queue');\n    setNotice('Queue cleared. The current song is still playing.');\n  };\n\n  const copyRequestLink = async () => {
+  const clearQueue = async () => {
+    if (!queue.length) { setNotice('The queue is already empty.'); return; }
+    if (!window.confirm('Clear all ' + queue.length + ' queued songs? The currently playing song will not be stopped.')) return;
+    await control('clear-queue');
+    setNotice('Queue cleared. The current song is still playing.');
+  };
+
+  const copyRequestLink = async () => {
     try { await navigator.clipboard.writeText(requestUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
     catch { setNotice('Copy is unavailable on this device. Use the QR code instead.'); }
   };
