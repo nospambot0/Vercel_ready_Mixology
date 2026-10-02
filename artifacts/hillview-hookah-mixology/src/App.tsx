@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube, Disc3 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calculator, Check, CheckCircle2, Printer, QrCode, RefreshCw, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, Edit3, ExternalLink, Flame, GlassWater, Heart, Home as HomeIcon, Leaf, ListMusic, LogOut, Music2, PackageOpen, Play, Plus, RotateCcw, Send, Settings2, SkipForward, Sparkles, Star, Trash2, Wind, X, Youtube, Disc3, Megaphone } from 'lucide-react';
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { AVOID_OPTIONS, TASTE_OPTIONS, flavours as defaultFlavours, premixes as defaultPremixes, type Flavour, type Premix, type Strength } from './data/flavours';
 import { CATALOG_STORAGE_KEY, readCatalog } from './logic/catalog';
@@ -1390,6 +1390,53 @@ function DJPage() {
   const [staffAdding, setStaffAdding] = useState(false);
   const [autoAdding, setAutoAdding] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [advPlaying, setAdvPlaying] = useState(false);
+
+  const playAdvAnnouncement = () => {
+    if (advPlaying) return;
+    setAdvPlaying(true);
+    const finish = () => setAdvPlaying(false);
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (Ctx) {
+        const context = audioContextRef.current ?? new Ctx();
+        audioContextRef.current = context;
+        const playStinger = () => {
+          const now = context.currentTime;
+          const master = context.createGain();
+          master.gain.setValueAtTime(0.0001, now);
+          master.gain.exponentialRampToValueAtTime(0.12, now + 0.03);
+          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+          master.connect(context.destination);
+          [659.25, 783.99, 1046.5].forEach((frequency, index) => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            const start = now + index * 0.08;
+            oscillator.type = index === 2 ? 'sine' : 'triangle';
+            oscillator.frequency.setValueAtTime(frequency, start);
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(0.55, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+            oscillator.connect(gain); gain.connect(master);
+            oscillator.start(start); oscillator.stop(start + 0.32);
+          });
+        };
+        if (context.state === 'suspended') void context.resume().then(playStinger).catch(() => {}); else playStinger();
+      }
+    } catch {}
+    window.setTimeout(() => {
+      try {
+        window.speechSynthesis.cancel();
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find((item) => /^en-IN/i.test(item.lang)) || voices.find((item) => /^en-GB/i.test(item.lang)) || voices.find((item) => /^en-US/i.test(item.lang)) || voices[0];
+        const utterance = new SpeechSynthesisUtterance('Mixology Pro, presented by Hillview Cafe. Play your music now using our app.');
+        if (voice) utterance.voice = voice;
+        utterance.lang = voice?.lang || 'en-IN'; utterance.rate = 0.94; utterance.pitch = 0.95; utterance.volume = 1;
+        utterance.onend = finish; utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+      } catch { finish(); }
+    }, 350);
+  };
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
   const queuePollInFlightRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1663,7 +1710,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying} onClick={playAdvAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button></div>
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
