@@ -1196,8 +1196,7 @@ function DJRequestPage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const addSong = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSong = async (playNow: boolean) => {
     setMessage('');
     const trimmed = url.trim();
     if (!trimmed) return;
@@ -1210,18 +1209,23 @@ function DJRequestPage() {
       const response = await fetch('/api/dj/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed, requesterName: requesterName.trim() }),
+        body: JSON.stringify({ url: trimmed, requesterName: requesterName.trim(), playNow }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not add that song.');
       setUrl('');
       setRequesterName('');
-      setMessage('Added to the DJ queue.');
+      setMessage(playNow ? 'Playing now — the current song was moved back into the queue.' : 'Added to the DJ queue.');
     await loadQueue();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not add that song.');
     } finally { setAdding(false); }
   };
+  const addSong = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await submitSong(false);
+  };
+
 
   const current = items.find((item) => item.status === 'playing');
   const upcoming = items.filter((item) => item.status === 'queued');
@@ -1257,7 +1261,10 @@ function DJRequestPage() {
           <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
-            <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'}</button>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+              <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'}</button>
+              <button type="button" disabled={adding} onClick={() => void submitSong(true)} className="min-h-13 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-bold text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-play-now"><Play size={16} className="mr-1 inline" /> Play Now</button>
+            </div>
           </div>
           {message && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold" role="status">{message}</p>}
           <p className="mt-3 text-[10px] leading-5 text-muted-foreground">Only YouTube video links are accepted. Songs marked age-restricted by YouTube may be accepted; obviously disturbing or graphic videos are filtered.</p>
