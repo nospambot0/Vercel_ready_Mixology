@@ -233,8 +233,8 @@ function VisitorCounter() {
 
 function AppFooter() {
   return (
-    <footer className="hv-shell pb-32 pt-8 md:pt-10">
-      <div className="border-t border-border/60 pt-5 text-center">
+    <footer className="pointer-events-none fixed inset-x-0 bottom-20 z-40 px-4 pb-2 md:bottom-24">
+      <div className="mx-auto flex w-fit items-center justify-center rounded-full border border-border/70 bg-background/95 px-4 py-2 shadow-lg backdrop-blur-md">
         <VisitorCounter />
       </div>
     </footer>
