@@ -44,6 +44,8 @@ export default async function handler(req:any,res:any):Promise<void> {
     } else if(action==='remove') {
       if(!id){json(res,400,{error:'A queue item is required.'});return;}
       await sql`DELETE FROM dj_queue WHERE id=${id} AND status='queued'`;
+    } else if(action==='clear-queue') {
+      await sql`DELETE FROM dj_queue WHERE status='queued'`;
     } else { json(res,400,{error:'Unknown DJ action.'}); return; }
     json(res,200,await state(sql));
   } catch(error) { json(res,500,{error:error instanceof Error?error.message:'DJ control database error.'}); }
