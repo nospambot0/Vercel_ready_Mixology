@@ -1427,7 +1427,11 @@ function DJPage() {
 
     window.setTimeout(() => {
       try {
+        let spoken = false;
         const speak = () => {
+          if (spoken) return;
+          spoken = true;
+          window.speechSynthesis.removeEventListener('voiceschanged', speak);
           const voices = window.speechSynthesis.getVoices();
           const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
           const voice =
@@ -1456,7 +1460,9 @@ function DJPage() {
           speak();
         } else {
           window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
-          window.setTimeout(speak, 500);
+          window.setTimeout(() => {
+            if (!spoken) speak();
+          }, 700);
         }
       } catch { finish(); }
     }, 400);
