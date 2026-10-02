@@ -209,6 +209,38 @@ function BottomNav({ choice }: { choice: Choice | null }) {
   );
 }
 
+function VisitorCounter() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/visitors', { cache: 'no-store', credentials: 'include' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (active && Number.isFinite(Number(data?.count))) setCount(Number(data.count));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <span className="inline-flex items-center gap-2 font-mono text-[10px] text-muted-foreground/70" aria-label={count === null ? 'Unique visitors' : `Unique visitors: ${count.toLocaleString()}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
+      UNIQUE VISITORS {count === null ? '—' : count.toLocaleString()}
+    </span>
+  );
+}
+
+function AppFooter() {
+  return (
+    <footer className="hv-shell pb-32 pt-8 md:pt-10">
+      <div className="border-t border-border/60 pt-5 text-center">
+        <VisitorCounter />
+      </div>
+    </footer>
+  );
+}
+
 function AppShell({ children, choice }: { children: ReactNode; choice: Choice | null }) {
   const [location] = useLocation();
   return (
@@ -228,6 +260,7 @@ function AppShell({ children, choice }: { children: ReactNode; choice: Choice | 
       </header>
       {children}
       {location === '/' && <HomeIntroAnimation />}
+      <AppFooter />
       <BottomNav choice={choice} />
     </div>
   );
