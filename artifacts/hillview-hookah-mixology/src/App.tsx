@@ -1396,18 +1396,24 @@ function DJPage() {
     if (advPlaying) return;
     setAdvPlaying(true);
 
-    // Duck the YouTube music slightly while the ADV is speaking, then restore
-    // the exact volume the DJ was using before the announcement.
-    try {
-      if (playerRef.current?.getVolume && playerRef.current?.setVolume) {
-        const currentVolume = Number(playerRef.current.getVolume());
-        if (Number.isFinite(currentVolume)) {
-          advPreviousVolumeRef.current = currentVolume;
-          playerRef.current.setVolume(Math.max(0, Math.round(currentVolume * 0.55)));
+    // YouTube volume is controlled by the iframe player, so duck it immediately
+    // and again just before speech starts. Keep the DJ's exact volume for restore.
+    const duckYouTube = () => {
+      try {
+        if (!playerRef.current?.setVolume) return;
+        if (advPreviousVolumeRef.current === null && playerRef.current.getVolume) {
+          const currentVolume = Number(playerRef.current.getVolume());
+          if (Number.isFinite(currentVolume)) advPreviousVolumeRef.current = currentVolume;
+        }
+        const restoreVolume = advPreviousVolumeRef.current;
+        if (restoreVolume !== null) {
+          playerRef.current.setVolume(Math.max(0, Math.round(restoreVolume * 0.35)));
           advVolumeDuckedRef.current = true;
         }
-      }
-    } catch {}
+      } catch {}
+    };
+
+    duckYouTube();
 
     const finish = () => {
       if (advVolumeDuckedRef.current) {
@@ -1481,6 +1487,9 @@ function DJPage() {
           window.speechSynthesis.speak(utterance);
         };
 
+        // Re-apply the duck immediately before the voice starts so the
+        // YouTube iframe cannot overwrite it between the button press and speech.
+        duckYouTube();
         const voices = window.speechSynthesis.getVoices();
         if (voices.length) {
           speak();
