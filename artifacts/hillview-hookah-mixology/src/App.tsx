@@ -1036,6 +1036,75 @@ function ManagePage({ catalog, onChange, onLogout, section = 'flavours' }: { cat
   );
 }
 
+function AccessEmailsPage() {
+  const [emails, setEmails] = useState<string[]>([]);
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const loadEmails = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/manage/access-emails', { credentials: 'include', cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not load access emails.');
+      setEmails(Array.isArray(data.emails) ? data.emails : []);
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not load access emails.'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { void loadEmails(); }, []);
+
+  const addEmail = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) { setNotice('Enter a valid email address.'); return; }
+    setSaving(true); setNotice('');
+    try {
+      const response = await fetch('/api/manage/access-emails', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalized }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not add that email.');
+      setEmails(Array.isArray(data.emails) ? data.emails : []);
+      setEmail('');
+      setNotice(normalized + ' added. Staff OTP will now sync to this address.');
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not add that email.'); }
+    finally { setSaving(false); }
+  };
+
+  const removeEmail = async (target: string) => {
+    if (emails.length <= 1) { setNotice('Keep at least one staff access email.'); return; }
+    if (!window.confirm('Remove ' + target + ' from staff access emails?')) return;
+    setSaving(true); setNotice('');
+    try {
+      const response = await fetch('/api/manage/access-emails', { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: target }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not remove that email.');
+      setEmails(Array.isArray(data.emails) ? data.emails : []);
+      setNotice(target + ' removed from staff access.');
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not remove that email.'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <main className="hv-shell hv-page-in pb-28">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-7 flex items-end justify-between gap-3"><div><SectionEyebrow>STAFF SECURITY</SectionEyebrow><h1 className="hv-display text-5xl md:text-6xl">Access Emails</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Add or remove the email addresses that receive the staff OTP. The list is stored centrally and applies automatically to staff login.</p></div><Link href="/manage" className="hidden min-h-10 items-center gap-2 rounded-xl border border-border px-4 text-xs font-bold hover:bg-muted md:inline-flex"><ArrowLeft size={15} /> Dashboard</Link></div>
+        <form onSubmit={addEmail} className="hv-surface rounded-[2rem] p-5 md:p-7">
+          <label className="block text-xs font-bold" htmlFor="manage-access-email">Staff email address<input id="manage-access-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="mail@mixology.monster" className={manageInputClass} autoComplete="email" data-testid="input-manage-access-email" /></label>
+          <button type="submit" disabled={saving || !email.trim()} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-add-access-email"><Plus size={17} /> Add access email</button>
+        </form>
+        {notice && <p className="mt-4 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3 text-sm font-semibold text-secondary-foreground" role="status">{notice}</p>}
+        <section className="mt-5 hv-surface rounded-[2rem] p-5 md:p-7">
+          <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>ACTIVE ACCESS</SectionEyebrow><h2 className="hv-display text-3xl">Staff email list</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{emails.length}</span></div>
+          {loading ? <p className="mt-6 text-sm text-muted-foreground">Loading access emails…</p> : <div className="mt-5 space-y-2">{emails.map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-border bg-background/50 p-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/15 text-secondary"><Send size={16} /></div><span className="min-w-0 flex-1 truncate text-sm font-semibold">{item}</span><button type="button" disabled={saving || emails.length <= 1} onClick={() => void removeEmail(item)} className="rounded-xl border border-destructive/30 px-3 py-2 text-[10px] font-bold text-destructive hover:bg-destructive/10 disabled:opacity-40" data-testid={'button-remove-access-email-' + item}>Remove</button></div>)}</div>}
+          <p className="mt-5 text-[10px] leading-5 text-muted-foreground">This manages which existing email addresses are authorized to receive staff verification codes. It does not create or read mailboxes.</p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function PosPage() {
   const PAYEE_UPI = '7538090063@ptaxis';
   const [amount, setAmount] = useState('');
@@ -1711,7 +1780,12 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
             <p className="mt-3 text-sm leading-6 text-muted-foreground">Create and maintain premix recipes, flavour percentages and customer-facing descriptions.</p>
             <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">{catalog.premixes.length} premixes</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div>
           </Link>
-          <Link href="/manage/dj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-dj"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Music2 size={26} /></div><h2 className="hv-display mt-6 text-3xl">DJ</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Control the shared song queue from the phone connected to the speaker. Customers can submit requests.</p><div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">Staff playback</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div></Link><Link href="/manage/karmadj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-karmadj">
+          <Link href="/manage/dj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-dj"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Music2 size={26} /></div><h2 className="hv-display mt-6 text-3xl">DJ</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Control the shared song queue from the phone connected to the speaker. Customers can submit requests.</p><div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">Staff playback</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div></Link><Link href="/manage/access-emails" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-access-emails">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Send size={26} /></div>
+            <h2 className="hv-display mt-6 text-3xl">Access Emails</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Manage the email addresses that receive staff login verification codes. Changes sync automatically.</p>
+            <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">Staff access</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div>
+          </Link><Link href="/manage/karmadj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-karmadj">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><ListMusic size={26} /></div>
             <h2 className="hv-display mt-6 text-3xl">KARMADJ Beta</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">Standalone staff DJ mixer with local audio decks, BPM analysis, tempo sync and automatic mixing.</p>
@@ -1843,6 +1917,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
     if (location === '/manage/pos') return <PosPage />;
     if (location === '/manage/dj') return <DJPage />;
+    if (location === '/manage/access-emails') return <AccessEmailsPage />;
     return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
   }
 
@@ -2087,7 +2162,7 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, onFind
       <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route path="/manage/flavours"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route path="/manage/premixes"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
-      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/karmadj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/dj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/dj-request"><DJRequestPage /></Route>
+      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/karmadj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/access-emails"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/dj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/dj-request"><DJRequestPage /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
   );

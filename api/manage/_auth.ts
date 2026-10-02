@@ -1,4 +1,5 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { neon } from '@neondatabase/serverless';
 
 const SESSION_COOKIE = 'hillview_manage_session';
 const OTP_COOKIE = 'hillview_manage_otp';
@@ -6,8 +7,7 @@ const SESSION_VALUE = 'authenticated';
 const SESSION_MAX_AGE = 8 * 60 * 60;
 const OTP_MAX_AGE = 10 * 60;
 const OTP_RESEND_COOLDOWN = 60;
-const STAFF_OTP_EMAILS = ['r.rakeshdas401@gmail.com', 'ekalabyapradhan70@gmail.com'] as const;
-const DEFAULT_STAFF_OTP_EMAIL = STAFF_OTP_EMAILS[0];
+const DEFAULT_STAFF_OTP_EMAILS = ['r.rakeshdas401@gmail.com', 'ekalabyapradhan70@gmail.com'];
 const PASSWORD_SESSION_VALUE = 'authenticated';
 
 type RequestLike = {
@@ -124,8 +124,27 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function isAuthorizedStaffEmail(email: string): boolean {
-  return STAFF_OTP_EMAILS.includes(normalizeEmail(email) as (typeof STAFF_OTP_EMAILS)[number]);
+function db() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL is not configured.');
+  return neon(url);
+}
+
+export async function getStaffOtpEmails(): Promise<string[]> {
+  const sql = db();
+  await sql`CREATE TABLE IF NOT EXISTS manage_access_emails (email TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
+  for (const email of DEFAULT_STAFF_OTP_EMAILS) await sql`INSERT INTO manage_access_emails (email) VALUES (${email}) ON CONFLICT (email) DO NOTHING`;
+  const countRows = await sql`SELECT COUNT(*)::int AS count FROM manage_access_emails`;
+  if (Number(countRows[0]?.count ?? 0) === 0) {
+    for (const email of DEFAULT_STAFF_OTP_EMAILS) await sql`INSERT INTO manage_access_emails (email) VALUES (${email}) ON CONFLICT (email) DO NOTHING`;
+  }
+  const rows = await sql`SELECT email FROM manage_access_emails ORDER BY created_at ASC, email ASC`;
+  return rows.map((row: any) => String(row.email));
+}
+
+export async function isAuthorizedStaffEmail(email: string): Promise<boolean> {
+  const emails = await getStaffOtpEmails();
+  return emails.includes(normalizeEmail(email));
 }
 
 function isValidPassword(password: string): boolean {
@@ -133,14 +152,14 @@ function isValidPassword(password: string): boolean {
   return Boolean(configured && password && safeEqual(password, configured));
 }
 
-async function sendOtpEmail(code: string): Promise<void> {
+async function sendOtpEmail(code: string, recipients: string[]): Promise<void> {
   const apiKey = getEnv('RESEND_API_KEY');
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: 'Mixology PRO <staff@mixology.monster>',
-      to: [...STAFF_OTP_EMAILS],
+      to: recipients,
       subject: 'Mixology PRO verification code',
       text: [
         'Mixology PRO staff verification',
@@ -188,7 +207,9 @@ export async function handleLogin(req: RequestLike, res: ResponseLike): Promise<
     const issuedAt = Date.now();
 
     try {
-      await sendOtpEmail(code);
+      const recipients = await getStaffOtpEmails();
+      if (!recipients.length) throw new Error('No staff access emails are configured.');
+      await sendOtpEmail(code, recipients);
       setCookie(res, OTP_COOKIE, createOtpToken(code, issuedAt), OTP_MAX_AGE);
       sendJson(res, 200, { sent: true, expiresIn: OTP_MAX_AGE });
     } catch (error) {
