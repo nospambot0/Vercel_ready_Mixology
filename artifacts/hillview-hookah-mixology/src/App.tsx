@@ -1470,33 +1470,73 @@ function DJPage() {
 
   const advStartedAtRef = useRef(Date.now());
   const lastAdvTriggerIdRef = useRef<string | null>(null);
+  const lastAdvTriggerAtRef = useRef(0);
+  const advPollInFlightRef = useRef(false);
 
   const checkAdvTrigger = async () => {
+    if (advPollInFlightRef.current) return;
+    advPollInFlightRef.current = true;
     try {
-      const response = await fetch(`/api/dj/adv?ts=${Date.now()}`, { cache: 'no-store' });
+      const response = await fetch(`/api/dj/adv?ts=${Date.now()}`, {
+        cache: 'no-store',
+        credentials: 'include',
+      });
       if (!response.ok) return;
       const data = await response.json();
       const trigger = data.trigger as { id?: string; createdAt?: string } | null;
       if (!trigger?.id || trigger.id === lastAdvTriggerIdRef.current) return;
-      lastAdvTriggerIdRef.current = trigger.id;
+
       const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
-      if (createdAt > advStartedAtRef.current - 1000) playAdvAnnouncement();
-    } catch {}
+      lastAdvTriggerIdRef.current = trigger.id;
+
+      // Ignore an old announcement when a staff device first opens the page.
+      if (!createdAt || createdAt <= lastAdvTriggerAtRef.current) return;
+      lastAdvTriggerAtRef.current = createdAt;
+      if (createdAt < advStartedAtRef.current - 1500) return;
+
+      // Re-activate the local audio context before remote playback where possible.
+      try {
+        if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume();
+      } catch {}
+      playAdvAnnouncement();
+    } catch {
+      // Keep polling; transient network/database errors must not stop ADV delivery.
+    } finally {
+      advPollInFlightRef.current = false;
+    }
   };
 
   const triggerAdvForAllStaffTabs = async () => {
+    // Play immediately on the device that pressed ADV, then persist the trigger
+    // so every other open staff device can detect the same announcement.
     playAdvAnnouncement();
     try {
-      await fetch('/api/dj/adv', {
+      const response = await fetch('/api/dj/adv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({}),
+        cache: 'no-store',
       });
-    } catch {}
+      if (!response.ok) throw new Error('ADV broadcast failed');
+    } catch {
+      setNotice('ADV played here, but the staff-device broadcast could not be sent.');
+    }
   };
 
   useEffect(() => {
+    // Poll independently from the queue so ADV delivery is not delayed by queue
+    // requests or another slow network call.
     void checkAdvTrigger();
+    const timer = window.setInterval(() => void checkAdvTrigger(), 750);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void checkAdvTrigger();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const lastQueueIdsRef = useRef<Set<string> | null>(null);
@@ -1796,7 +1836,7 @@ function DJPage() {
             <div className="flex items-center justify-between gap-3"><div><SectionEyebrow>SHARED QUEUE</SectionEyebrow><h2 className="hv-display text-3xl">Up next</h2></div><div className="flex items-center gap-2"><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px]">{queue.length}</span><button type="button" disabled={working || queue.length === 0} onClick={() => void clearQueue()} className="flex min-h-9 items-center gap-1.5 rounded-lg border border-destructive/30 px-3 text-[10px] font-bold text-destructive hover:bg-destructive/10 disabled:opacity-40" data-testid="button-dj-clear-queue"><Trash2 size={13} /> Clear Queue</button></div></div>
             <div className="mt-5 space-y-2">
               {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p> : queue.length === 0 ? <p className="rounded-2xl border border-dashed border-border p-7 text-center text-sm text-muted-foreground">No requests yet.</p> :
-                queue.map((item, index) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/40 p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><Youtube size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube</p></div><button type="button" disabled={working} onClick={() => void control('play', item.id)} className="flex h-9 items-center gap-1 rounded-lg bg-secondary px-3 text-[10px] font-black text-secondary-foreground disabled:opacity-50"><Play size={13} /> Play</button><button type="button" disabled={working} onClick={() => void control('remove', item.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50" aria-label={`Remove ${item.title}`}><Trash2 size={14} /></button></div>)}
+                queue.map((item, index) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/40 p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><Youtube size={16} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube · Requested by <span className="font-semibold text-foreground">{item.requesterName || 'Guest'}</span></p></div><button type="button" disabled={working} onClick={() => void control('play', item.id)} className="flex h-9 items-center gap-1 rounded-lg bg-secondary px-3 text-[10px] font-black text-secondary-foreground disabled:opacity-50"><Play size={13} /> Play</button><button type="button" disabled={working} onClick={() => void control('remove', item.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted disabled:opacity-50" aria-label={`Remove ${item.title}`}><Trash2 size={14} /></button></div>)}
             </div>
           </section>
         </div>
