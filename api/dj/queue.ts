@@ -193,6 +193,7 @@ export default async function handler(req: any, res: any): Promise<void> {
       }
       const raw = typeof body.url === 'string' ? body.url.trim() : '';
       const requesterName = typeof body.requesterName === 'string' ? body.requesterName.trim().slice(0, 80) : '';
+      const playNow = body.playNow === true;
       const requesterUrlRaw = typeof body.requesterUrl === 'string' ? body.requesterUrl.trim().slice(0, 500) : '';
       let requesterUrl: string | null = null;
       if (requesterUrlRaw) {
@@ -215,8 +216,12 @@ export default async function handler(req: any, res: any): Promise<void> {
       const id = randomUUID();
       const title = await fetchTrackTitle(parsed.normalized, parsed.source);
       if (looksDisturbing(title)) { json(res, 400, { error: 'That video does not appear to be suitable for the DJ queue.' }); return; }
-      await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, ${requesterName}, ${requesterUrl}, 'queued', NOW())`;
-      json(res, 201, { added: true, id });
+      if (playNow) {
+        await sql`UPDATE dj_queue SET status = 'queued', created_at = NOW() WHERE status = 'playing'`;
+      }
+      const nextStatus = playNow ? 'playing' : 'queued';
+      await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, ${requesterName}, ${requesterUrl}, ${nextStatus}, NOW())`;
+      json(res, 201, { added: true, id, playNow });
       return;
     }
     json(res, 405, { error: 'Method not allowed' });
