@@ -1505,11 +1505,14 @@ function DJPage() {
   };
 
   const playHkvAnnouncement = () => {
-    if (hkvPlaying) return;
+    if (hkvPlaying || advPlaying) return;
     setHkvPlaying(true);
 
     let previousVolume: number | null = null;
     let ducked = false;
+    let spoken = false;
+    let fallbackTimer: number | null = null;
+
     const duckYouTube = () => {
       try {
         if (!playerRef.current?.setVolume) return;
@@ -1523,64 +1526,71 @@ function DJPage() {
         }
       } catch {}
     };
+
     const finish = () => {
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (ducked) {
         try {
-          if (playerRef.current?.setVolume && previousVolume !== null) playerRef.current.setVolume(previousVolume);
+          if (playerRef.current?.setVolume && previousVolume !== null) {
+            playerRef.current.setVolume(previousVolume);
+          }
         } catch {}
       }
       setHkvPlaying(false);
     };
 
-    duckYouTube();
-
-    window.setTimeout(() => {
+    const speak = () => {
+      if (spoken) return;
+      spoken = true;
       try {
-        let spoken = false;
-        const speak = () => {
-          if (spoken) return;
-          spoken = true;
-          window.speechSynthesis.removeEventListener('voiceschanged', speak);
-          duckYouTube();
-
-          const voices = window.speechSynthesis.getVoices();
-          const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
-          const voice =
-            voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name)) ||
-            voices.find((item) => /^en-IN/i.test(item.lang)) ||
-            voices.find((item) => /^en-GB/i.test(item.lang)) ||
-            voices.find((item) => /^en-US/i.test(item.lang)) ||
-            voices[0];
-
-          const utterance = new SpeechSynthesisUtterance(
-            'Hillview serves authentic Turkish hookah, starting at five hundred rupees. Reach out to Hookah Staff now!'
-          );
-          if (voice) utterance.voice = voice;
-          utterance.lang = voice?.lang || 'en-IN';
-          utterance.rate = 0.84;
-          utterance.pitch = 1.14;
-          utterance.volume = 1;
-          utterance.onend = finish;
-          utterance.onerror = finish;
-          window.speechSynthesis.speak(utterance);
-        };
+        window.speechSynthesis.cancel();
+        duckYouTube();
 
         const voices = window.speechSynthesis.getVoices();
-        if (voices.length) {
-          speak();
-        } else {
-          window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
-          window.setTimeout(() => {
-            if (!spoken) speak();
-          }, 700);
-        }
+        const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
+        const voice =
+          voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
+          voices.find((item) => femaleNames.test(item.name)) ||
+          voices.find((item) => /^en-IN/i.test(item.lang)) ||
+          voices.find((item) => /^en-GB/i.test(item.lang)) ||
+          voices.find((item) => /^en-US/i.test(item.lang)) ||
+          voices[0];
+
+        const utterance = new SpeechSynthesisUtterance(
+          'Hillview serves authentic Turkish hookah, starting at five hundred rupees. Reach out to Hookah Staff now!'
+        );
+        if (voice) utterance.voice = voice;
+        utterance.lang = voice?.lang || 'en-IN';
+        utterance.rate = 0.84;
+        utterance.pitch = 1.14;
+        utterance.volume = 1;
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+
+        // Prevent a stuck HKV state if a browser speech engine silently fails.
+        fallbackTimer = window.setTimeout(() => {
+          if (hkvPlaying) finish();
+        }, 12000);
       } catch {
         finish();
       }
-    }, 250);
+    };
+
+    duckYouTube();
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length) {
+        speak();
+      } else {
+        window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+        window.setTimeout(speak, 1000);
+      }
+    } catch {
+      speak();
+    }
   };
 
   const advStartedAtRef = useRef(Date.now());
