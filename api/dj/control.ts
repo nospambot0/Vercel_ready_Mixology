@@ -37,10 +37,10 @@ export default async function handler(req:any,res:any):Promise<void> {
     if(action==='play') {
       if(!id){json(res,400,{error:'A queue item is required.'});return;}
       await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
-      await sql`UPDATE dj_queue SET status='playing' WHERE id=${id} AND status='queued'`;
+      await sql`UPDATE dj_queue SET status='playing', played_at=NOW() WHERE id=${id} AND status='queued'`;
     } else if(action==='next') {
       await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
-      await sql`UPDATE dj_queue SET status='playing' WHERE id=(SELECT id FROM dj_queue WHERE status='queued' ORDER BY created_at ASC LIMIT 1)`;
+      await sql`UPDATE dj_queue SET status='playing', played_at=NOW() WHERE id=(SELECT id FROM dj_queue WHERE status='queued' ORDER BY created_at ASC LIMIT 1)`;
     } else if(action==='stop') {
       await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
     } else if(action==='remove') {
