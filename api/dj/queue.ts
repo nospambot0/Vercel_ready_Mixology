@@ -83,7 +83,9 @@ async function ensureTable(sql: any) {
   await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT 'Guest', requester_url TEXT, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_name TEXT NOT NULL DEFAULT 'Guest'`;
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_url TEXT`;
+  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
 }
 
 
@@ -141,9 +143,11 @@ async function addAutoTracks(sql: any, mode: AutoMode): Promise<{ added: number;
   for (const track of target) {
     if (added >= 10) break;
     const normalized = `https://www.youtube.com/watch?v=${track.videoId}`;
-    const duplicate = mode === 'latest-bollywood'
-      ? await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND created_at > NOW() - INTERVAL '60 minutes' LIMIT 1`
-      : await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND status IN ('queued','playing') LIMIT 1`;
+    const duplicate = mode === 'afro-bollywood'
+      ? await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND (status IN ('queued','playing') OR played_at > NOW() - INTERVAL '24 hours') LIMIT 1`
+      : mode === 'latest-bollywood'
+        ? await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND (status IN ('queued','playing') OR created_at > NOW() - INTERVAL '60 minutes') LIMIT 1`
+        : await sql`SELECT id FROM dj_queue WHERE url = ${normalized} AND status IN ('queued','playing') LIMIT 1`;
     if (duplicate.length) {
       skipped++;
       continue;
@@ -151,8 +155,8 @@ async function addAutoTracks(sql: any, mode: AutoMode): Promise<{ added: number;
     const countRows = await sql`SELECT COUNT(*)::int AS count FROM dj_queue WHERE status IN ('queued','playing')`;
     if ((countRows[0]?.count ?? 0) >= 100) break;
     const id = randomUUID();
-    await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at)
-      VALUES (${id}, 'youtube', ${normalized}, ${track.title}, 'Auto DJ', NULL, 'queued', NOW())`;
+    await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at, played_at)
+      VALUES (${id}, 'youtube', ${normalized}, ${track.title}, 'Auto DJ', NULL, 'queued', NOW(), NULL)`;
     titles.push(track.title);
     added++;
   }
@@ -220,7 +224,7 @@ export default async function handler(req: any, res: any): Promise<void> {
         await sql`UPDATE dj_queue SET status = 'queued', created_at = NOW() WHERE status = 'playing'`;
       }
       const nextStatus = playNow ? 'playing' : 'queued';
-      await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, ${requesterName}, ${requesterUrl}, ${nextStatus}, NOW())`;
+      await sql`INSERT INTO dj_queue (id, source, url, title, requester_name, requester_url, status, created_at, played_at) VALUES (${id}, ${parsed.source}, ${parsed.normalized}, ${title}, ${requesterName}, ${requesterUrl}, ${nextStatus}, NOW(), ${playNow ? new Date() : null})`;
       json(res, 201, { added: true, id, playNow });
       return;
     }
