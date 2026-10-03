@@ -17,7 +17,9 @@ function json(res:any,status:number,body:unknown) {
 }
 
 async function ensureTable(sql:any) {
-  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL, played_at TIMESTAMPTZ)`;
+  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
+  await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
 }
 
 async function state(sql:any) {
@@ -34,13 +36,13 @@ export default async function handler(req:any,res:any):Promise<void> {
     const action=typeof body.action==='string'?body.action:''; const id=typeof body.id==='string'?body.id:'';
     if(action==='play') {
       if(!id){json(res,400,{error:'A queue item is required.'});return;}
-      await sql`UPDATE dj_queue SET status='played' WHERE status='playing'`;
+      await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
       await sql`UPDATE dj_queue SET status='playing' WHERE id=${id} AND status='queued'`;
     } else if(action==='next') {
-      await sql`UPDATE dj_queue SET status='played' WHERE status='playing'`;
+      await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
       await sql`UPDATE dj_queue SET status='playing' WHERE id=(SELECT id FROM dj_queue WHERE status='queued' ORDER BY created_at ASC LIMIT 1)`;
     } else if(action==='stop') {
-      await sql`UPDATE dj_queue SET status='played' WHERE status='playing'`;
+      await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
     } else if(action==='remove') {
       if(!id){json(res,400,{error:'A queue item is required.'});return;}
       await sql`DELETE FROM dj_queue WHERE id=${id} AND status='queued'`;
