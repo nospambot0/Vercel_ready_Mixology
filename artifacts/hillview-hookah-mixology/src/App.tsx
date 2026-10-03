@@ -1673,8 +1673,10 @@ function DJPage() {
         const utterance = new SpeechSynthesisUtterance(message);
         if (voice) utterance.voice = voice;
         utterance.lang = voice?.lang || 'en-IN';
-        utterance.rate = 0.86;
-        utterance.pitch = 1.1;
+        // Dramatic, sharp announcement delivery: slower cadence, lower pitch, full volume.
+        // Keep the voice clear and authoritative over the music bed.
+        utterance.rate = 0.80;
+        utterance.pitch = 0.92;
         utterance.volume = 1;
         utterance.onend = finish;
         utterance.onerror = finish;
