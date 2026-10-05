@@ -2186,7 +2186,7 @@ function DJPage() {
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
-              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. Music dips to 40% while the female announcement plays, then returns to the exact previous volume.</p>
+              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. BharatVoiceAI generates the announcement voice server-side. Music dips to 40% while it plays, then returns to the exact previous volume.</p>
               <textarea value={customAnnouncementText} onChange={(event) => setCustomAnnouncementText(event.target.value)} maxLength={500} rows={3} placeholder="Type your announcement here…" className="mt-4 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-xs outline-none focus:border-secondary" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="font-mono text-[10px] text-muted-foreground">{customAnnouncementText.length}/500</span>
