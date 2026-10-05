@@ -14,13 +14,6 @@ The `/manage` staff screen uses the built-in password `adminhillview`.
 The public mixology flow does not require a database or any other environment
 variables.
 
-For AI-powered DJ announcements, also add:
-
-- `BHARATVOICEAI_URL` — public base URL of your deployed BharatVoiceAI service (for example, `https://voice.example.com`)
-- `BHARATVOICEAI_API_KEY` — the BharatVoiceAI API key configured in `STATIC_API_KEYS`
-
-Mixology calls BharatVoiceAI server-side through `/api/dj/tts`; the API key is never exposed to staff-device browsers. BharatVoiceAI's TTS API accepts text, language, voice and speed and can stream MP3 audio. The repository's English TTS path currently falls back to gTTS, while Indic languages can use the Indic Parler-TTS backend.
-
 ## Build settings
 
 `vercel.json` already supplies:
