@@ -1628,14 +1628,10 @@ function DJPage() {
     const message = text.trim();
     if (!message || advPlaying || hkvPlaying || customAnnouncementPlaying) return;
     setCustomAnnouncementPlaying(true);
-
     let previousVolume: number | null = null;
     let ducked = false;
-    let finished = false;
+    let spoken = false;
     let fallbackTimer: number | null = null;
-    let audioUrl: string | null = null;
-    let audio: HTMLAudioElement | null = null;
-
     const duckYouTube = () => {
       try {
         if (!playerRef.current?.setVolume) return;
@@ -1649,30 +1645,20 @@ function DJPage() {
         }
       } catch {}
     };
-
     const finish = () => {
-      if (finished) return;
-      finished = true;
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      try { audio?.pause(); } catch {}
-      if (audioUrl) {
-        try { URL.revokeObjectURL(audioUrl); } catch {}
-        audioUrl = null;
-      }
       if (ducked) {
-        try {
-          if (playerRef.current?.setVolume && previousVolume !== null) {
-            playerRef.current.setVolume(previousVolume);
-          }
-        } catch {}
+        try { if (playerRef.current?.setVolume && previousVolume !== null) playerRef.current.setVolume(previousVolume); } catch {}
       }
       setCustomAnnouncementPlaying(false);
     };
-
-    const browserFallback = () => {
+    const speak = () => {
+      if (spoken) return;
+      spoken = true;
       try {
         window.speechSynthesis.cancel();
         if (window.speechSynthesis.resume) window.speechSynthesis.resume();
+        duckYouTube();
         const voices = window.speechSynthesis.getVoices();
         const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
         const voice =
@@ -1684,10 +1670,11 @@ function DJPage() {
           voices.find((item) => /^en-GB/i.test(item.lang)) ||
           voices.find((item) => /^en-US/i.test(item.lang)) ||
           voices[0];
-
         const utterance = new SpeechSynthesisUtterance(message);
         if (voice) utterance.voice = voice;
         utterance.lang = voice?.lang || 'en-IN';
+        // Dramatic, sharp announcement delivery: slower cadence, lower pitch, full volume.
+        // Keep the voice clear and authoritative over the music bed.
         utterance.rate = 0.80;
         utterance.pitch = 0.92;
         utterance.volume = 1;
@@ -1695,46 +1682,16 @@ function DJPage() {
         utterance.onerror = finish;
         window.speechSynthesis.speak(utterance);
         fallbackTimer = window.setTimeout(() => finish(), Math.max(15000, Math.min(60000, message.length * 95)));
-      } catch {
-        finish();
-      }
+      } catch { finish(); }
     };
-
-    const speak = async () => {
-      try {
-        duckYouTube();
-        const response = await fetch('/api/dj/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          cache: 'no-store',
-          body: JSON.stringify({
-            text: message,
-            lang: 'en',
-            voice: 'female_2',
-            speed: 0.85,
-          }),
-        });
-        if (!response.ok) throw new Error('BharatVoiceAI TTS request failed');
-
-        const blob = await response.blob();
-        if (!blob.size) throw new Error('Empty TTS audio');
-        audioUrl = URL.createObjectURL(blob);
-        audio = new Audio(audioUrl);
-        audio.preload = 'auto';
-        audio.volume = 1;
-        audio.onended = finish;
-        audio.onerror = () => browserFallback();
-        await audio.play();
-        fallbackTimer = window.setTimeout(() => finish(), Math.max(15000, Math.min(60000, message.length * 120)));
-      } catch {
-        browserFallback();
-      }
-    };
-
     duckYouTube();
-    void speak();
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length) speak();
+      else { window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true }); window.setTimeout(speak, 1000); }
+    } catch { speak(); }
   };
+
   const advStartedAtRef = useRef(Date.now());
   const lastAdvTriggerIdRef = useRef<string | null>(null);
   const lastAdvTriggerAtRef = useRef(0);
@@ -2186,7 +2143,7 @@ function DJPage() {
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
-              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. BharatVoiceAI generates the announcement voice server-side. Music dips to 40% while it plays, then returns to the exact previous volume.</p>
+              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. Music dips to 40% while the female announcement plays, then returns to the exact previous volume.</p>
               <textarea value={customAnnouncementText} onChange={(event) => setCustomAnnouncementText(event.target.value)} maxLength={500} rows={3} placeholder="Type your announcement here…" className="mt-4 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-xs outline-none focus:border-secondary" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="font-mono text-[10px] text-muted-foreground">{customAnnouncementText.length}/500</span>
