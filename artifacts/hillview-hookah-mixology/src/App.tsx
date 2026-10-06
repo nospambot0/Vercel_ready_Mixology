@@ -1602,6 +1602,7 @@ function DJPage() {
   const [autoAdding, setAutoAdding] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [advPlaying, setAdvPlaying] = useState(false);
+  const [introPlaying, setIntroPlaying] = useState(false);
   const [hkvPlaying, setHkvPlaying] = useState(false);
   const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
   const [customAnnouncementText, setCustomAnnouncementText] = useState('');
@@ -1715,6 +1716,125 @@ function DJPage() {
         }
       } catch { finish(); }
     }, 400);
+  };
+
+  const playIntroAnnouncement = () => {
+    if (introPlaying || advPlaying || hkvPlaying || customAnnouncementPlaying) return;
+    setIntroPlaying(true);
+
+    const introText = 'This is your DJ Chagala, and we are now streaming music live in Hillview Cafe. If you want to request or play songs, head over to www.mixology.monster. For now, sit back, relax, have some coffee and enjoy.';
+    let previousVolume: number | null = null;
+    let ducked = false;
+    let audio: HTMLAudioElement | null = null;
+    let fadeTimer: number | null = null;
+    let fallbackTimer: number | null = null;
+    let finished = false;
+
+    const duckYouTube = () => {
+      try {
+        if (!playerRef.current?.setVolume) return;
+        if (previousVolume === null && playerRef.current.getVolume) {
+          const currentVolume = Number(playerRef.current.getVolume());
+          if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
+        }
+        if (previousVolume !== null) {
+          playerRef.current.setVolume(Math.max(0, Math.round(previousVolume * 0.35)));
+          ducked = true;
+        }
+      } catch {}
+    };
+
+    const restoreMusic = () => {
+      try {
+        if (fadeTimer !== null) window.clearInterval(fadeTimer);
+        if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+        if (audio) {
+          audio.onended = null;
+          audio.onerror = null;
+          audio.ontimeupdate = null;
+          audio.pause();
+          audio.src = '';
+        }
+        if (ducked && playerRef.current?.setVolume && previousVolume !== null) {
+          playerRef.current.setVolume(previousVolume);
+        }
+      } catch {}
+      setIntroPlaying(false);
+    };
+
+    const fadeMusicBack = () => {
+      if (!ducked || previousVolume === null || !playerRef.current?.setVolume) return;
+      try {
+        const start = performance.now();
+        const from = Math.max(0, Math.round(previousVolume * 0.35));
+        const duration = 4000;
+        if (fadeTimer !== null) window.clearInterval(fadeTimer);
+        fadeTimer = window.setInterval(() => {
+          const progress = Math.min(1, (performance.now() - start) / duration);
+          const eased = progress * progress * (3 - 2 * progress);
+          playerRef.current?.setVolume?.(Math.round(from + (previousVolume! - from) * eased));
+          if (progress >= 1) {
+            if (fadeTimer !== null) window.clearInterval(fadeTimer);
+            fadeTimer = null;
+          }
+        }, 50);
+      } catch {}
+    };
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      restoreMusic();
+    };
+
+    duckYouTube();
+
+    try {
+      audio = new Audio('/intro.mp3');
+      audio.preload = 'auto';
+      audio.volume = 1;
+      audio.ontimeupdate = () => {
+        if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        const remaining = audio.duration - audio.currentTime;
+        if (remaining <= 4.0) fadeMusicBack();
+      };
+      audio.onended = finish;
+      audio.onerror = () => {
+        // If the hosted MP3 is not present yet, fall back to the exact script.
+        try {
+          if (audio) { audio.pause(); audio.src = ''; }
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(introText);
+          const voices = window.speechSynthesis.getVoices();
+          const voice = voices.find((item) => /^en-IN/i.test(item.lang)) ||
+            voices.find((item) => /^en-GB/i.test(item.lang)) ||
+            voices.find((item) => /^en-US/i.test(item.lang)) ||
+            voices[0];
+          if (voice) utterance.voice = voice;
+          utterance.lang = voice?.lang || 'en-IN';
+          utterance.rate = 0.88;
+          utterance.pitch = 0.98;
+          utterance.volume = 1;
+          let speechStartedAt = 0;
+          const estimateMs = Math.max(7000, introText.length * 65);
+          const fadeAt = Math.max(2500, estimateMs - 4000);
+          window.setTimeout(() => {
+            if (!finished) fadeMusicBack();
+          }, fadeAt);
+          utterance.onend = finish;
+          utterance.onerror = finish;
+          window.speechSynthesis.speak(utterance);
+          fallbackTimer = window.setTimeout(finish, estimateMs + 5000);
+        } catch {
+          finish();
+        }
+      };
+      void audio.play().catch(() => {
+        if (audio) audio.onerror?.(new Event('error'));
+      });
+    } catch {
+      finish();
+    }
   };
 
   const playHkvAnnouncement = () => {
@@ -2317,7 +2437,7 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
