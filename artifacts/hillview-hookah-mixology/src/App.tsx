@@ -1792,8 +1792,9 @@ function DJPage() {
     duckYouTube();
 
     try {
-      audio = new Audio('/ElevenLabs_2026-10-06T17_43_27_Benne%20-%20Young%20South%20Indian%20Companion_pvc_sp100_s35_sb56_v4.mp3');
+      audio = new Audio('https://raw.githubusercontent.com/nospambot0/Vercel_ready_Mixology/main/artifacts/hillview-hookah-mixology/public/ElevenLabs_2026-10-06T17_43_27_Benne%20-%20Young%20South%20Indian%20Companion_pvc_sp100_s35_sb56_v4.mp3');
       audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
       audio.volume = 1;
       audio.ontimeupdate = () => {
         if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
@@ -1830,8 +1831,20 @@ function DJPage() {
           finish();
         }
       };
+      audio.load();
       void audio.play().catch(() => {
-        if (audio) audio.onerror?.(new Event('error'));
+        // Some mobile browsers reject the first play attempt while the MP3 is still loading.
+        // Retry once after the media becomes playable; otherwise use the speech fallback.
+        if (!audio) return;
+        const retry = () => {
+          audio?.removeEventListener('canplay', retry);
+          void audio?.play().catch(() => audio?.onerror?.(new Event('error')));
+        };
+        audio.addEventListener('canplay', retry, { once: true });
+        window.setTimeout(() => {
+          audio?.removeEventListener('canplay', retry);
+          if (!finished && audio?.paused) audio?.onerror?.(new Event('error'));
+        }, 3000);
       });
     } catch {
       finish();
