@@ -1727,6 +1727,7 @@ function DJPage() {
     let ducked = false;
     let audio: HTMLAudioElement | null = null;
     let fadeTimer: number | null = null;
+    let fadeStarted = false;
     let fallbackTimer: number | null = null;
     let finished = false;
 
@@ -1763,7 +1764,8 @@ function DJPage() {
     };
 
     const fadeMusicBack = () => {
-      if (!ducked || previousVolume === null || !playerRef.current?.setVolume) return;
+      if (!ducked || previousVolume === null || !playerRef.current?.setVolume || fadeStarted) return;
+      fadeStarted = true;
       try {
         const start = performance.now();
         const from = Math.max(0, Math.round(previousVolume * 0.35));
@@ -1815,7 +1817,6 @@ function DJPage() {
           utterance.rate = 0.88;
           utterance.pitch = 0.98;
           utterance.volume = 1;
-          let speechStartedAt = 0;
           const estimateMs = Math.max(7000, introText.length * 65);
           const fadeAt = Math.max(2500, estimateMs - 4000);
           window.setTimeout(() => {
