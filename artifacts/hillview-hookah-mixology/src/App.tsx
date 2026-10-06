@@ -482,31 +482,31 @@ function GuestNowPlayingBoxes() {
   }, []);
 
   const card = (label: string, track: typeof GUEST_NOW_PLAYING_TRACKS[number], testId: string) => (
-    <section className="hv-surface rounded-[2rem] p-5 shadow-sm md:p-6" data-testid={testId}>
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary">
-          <Music2 size={21} />
+    <section className="overflow-hidden rounded-[2rem] border border-secondary/35 bg-background/75 p-5 shadow-lg shadow-secondary/5 md:p-6" data-testid={testId}>
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary shadow-sm">
+          <Music2 size={23} />
         </div>
-        <div className="min-w-0">
-          <SectionEyebrow>NOW PLAYING</SectionEyebrow>
-          <h3 className="hv-display truncate text-2xl md:text-3xl">{label}</h3>
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[10px] font-black tracking-[0.2em] text-secondary">NOW PLAYING</p>
+          <h3 className="hv-display mt-1 truncate text-3xl leading-tight text-foreground md:text-4xl">{label}</h3>
         </div>
       </div>
       <a
         href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist}`)}`}
         target="_blank"
         rel="noreferrer"
-        className="mt-5 block rounded-2xl border border-border/70 bg-background/60 p-4 transition hover:border-secondary/50 hover:bg-secondary/5"
+        className="mt-5 block rounded-2xl border border-secondary/20 bg-background/55 p-4 transition hover:border-secondary/50 hover:bg-secondary/5"
       >
-        <p className="font-semibold">{track.title}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{track.artist} · YouTube</p>
+        <p className="text-base font-black text-foreground">{track.title}</p>
+        <p className="mt-1 text-xs font-medium text-muted-foreground">{track.artist} · YouTube</p>
       </a>
-      <p className="mt-3 text-[10px] text-muted-foreground">Updates every 5 minutes</p>
+      <p className="mt-3 text-[10px] font-medium text-muted-foreground">Updates every 5 minutes</p>
     </section>
   );
 
   return (
-    <section className="mt-8 grid gap-5 md:grid-cols-2" aria-label="Guest now playing">
+    <section className="mt-7 grid gap-5" aria-label="Guest now playing">
       {card('The Average Guy Cafe', trackA, 'guest-now-playing-average-guy-cafe')}
       {card('Caha by Romeolane', trackB, 'guest-now-playing-caha-romeolane')}
     </section>
@@ -1534,17 +1534,17 @@ function DJRequestPage() {
           <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a YouTube song link. The DJ phone will play accepted requests from the shared queue.</p>
         </div>
         <GuestNowPlayingBoxes />
-        <section className="mt-7 overflow-hidden rounded-[2rem] border border-black bg-black p-5 text-white shadow-2xl md:p-6" aria-live="polite" data-testid="banner-currently-playing">
+        <section className="mt-7 overflow-hidden rounded-[2rem] border border-secondary/35 bg-background/75 p-5 shadow-lg shadow-secondary/5 md:p-6" aria-live="polite" data-testid="banner-currently-playing">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-black shadow-lg">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary shadow-sm">
               <Disc3 size={23} className={current ? 'animate-[spin_3s_linear_infinite]' : ''} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white">HILLVIEW CAFE & RESTRO</p>
-              <h2 className="mt-1 truncate text-base font-black md:text-lg">{current?.title || 'Nothing playing right now'}</h2>
-              <p className="mt-1 text-[11px] font-bold text-white/65">{current ? 'PLAYING LIVE IN THE CAFE' : 'THE DJ WILL APPEAR HERE WHEN THE NEXT SONG STARTS.'}</p>
+              <p className="font-mono text-[10px] font-black tracking-[0.2em] text-secondary">HILLVIEW CAFE & RESTRO</p>
+              <h2 className="hv-display mt-1 truncate text-3xl leading-tight text-foreground md:text-4xl">{current?.title || 'Nothing playing right now'}</h2>
+              <p className="mt-1 text-[11px] font-bold text-muted-foreground">{current ? 'PLAYING LIVE IN THE CAFE' : 'THE DJ WILL APPEAR HERE WHEN THE NEXT SONG STARTS.'}</p>
             </div>
-            {current && <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[9px] font-black tracking-wider text-black">LIVE</span>}
+            {current && <span className="shrink-0 rounded-full bg-secondary px-3 py-1 text-[9px] font-black tracking-wider text-secondary-foreground">LIVE</span>}
           </div>
         </section>
         <form onSubmit={addSong} className="hv-surface mt-5 rounded-[2rem] p-5 md:p-7">
