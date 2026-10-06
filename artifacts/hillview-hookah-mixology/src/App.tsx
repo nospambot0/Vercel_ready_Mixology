@@ -1736,15 +1736,35 @@ function DJPage() {
       try {
         const player = playerRef.current;
         if (!player?.setVolume) return false;
-        if (previousVolume === null && player.getVolume) {
-          const currentVolume = Number(player.getVolume());
-          if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
+
+        // YouTube's API can expose the player object before the iframe is
+        // actually ready. Do not treat a blind setVolume() call as success.
+        if (previousVolume === null) {
+          const currentVolume = Number(player.getVolume?.());
+          previousVolume = Number.isFinite(currentVolume) ? Math.max(0, Math.min(100, currentVolume)) : 100;
         }
-        if (previousVolume !== null) {
-          player.setVolume(Math.max(0, Math.round(previousVolume * 0.35)));
+
+        const targetVolume = Math.max(0, Math.round(previousVolume * 0.35));
+        player.setVolume(targetVolume);
+
+        // Verify the API accepted the new volume. If it did not, the caller
+        // will retry until the iframe is ready.
+        const appliedVolume = Number(player.getVolume?.());
+        if (Number.isFinite(appliedVolume) && Math.abs(appliedVolume - targetVolume) <= 2) {
           ducked = true;
           return true;
         }
+
+        // Some YouTube iframe versions do not return getVolume reliably.
+        // A successful setVolume call is still useful, but give it one more
+        // tick before declaring the duck complete.
+        window.setTimeout(() => {
+          try {
+            const check = Number(player.getVolume?.());
+            if (Number.isFinite(check) && Math.abs(check - targetVolume) <= 2) ducked = true;
+          } catch {}
+        }, 150);
+        return false;
       } catch {}
       return false;
     };
