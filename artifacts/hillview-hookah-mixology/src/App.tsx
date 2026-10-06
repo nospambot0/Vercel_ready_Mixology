@@ -1412,6 +1412,7 @@ function DJRequestPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState('');
+  const [playNowNotice, setPlayNowNotice] = useState(false);
 
   const loadQueue = async () => {
     try {
@@ -1447,6 +1448,10 @@ function DJRequestPage() {
       setUrl('');
       setRequesterName('');
       setMessage(playNow ? 'Playing now — the current song was moved back into the queue.' : 'Added to the DJ queue.');
+      if (playNow) {
+        setPlayNowNotice(true);
+        window.setTimeout(() => setPlayNowNotice(false), 3000);
+      }
     await loadQueue();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not add that song.');
@@ -1500,6 +1505,12 @@ function DJRequestPage() {
             </div>
           </div>
           {message && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold" role="status">{message}</p>}
+          {playNowNotice && (
+            <div className="fixed inset-x-4 bottom-24 z-[120] mx-auto max-w-md rounded-2xl border border-secondary/40 bg-primary px-5 py-4 text-center text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30" role="status" aria-live="polite">
+              <p>Please be considerate of other’s music</p>
+              <p className="mt-1 text-xs font-medium text-primary-foreground/70">Do not abuse this feature</p>
+            </div>
+          )}
           <p className="mt-3 text-[10px] leading-5 text-muted-foreground">Only YouTube video links are accepted. Songs marked age-restricted by YouTube may be accepted; obviously disturbing or graphic videos are filtered.</p>
         </form>
         <section className="mt-6 hv-surface rounded-[2rem] p-5 md:p-7">
