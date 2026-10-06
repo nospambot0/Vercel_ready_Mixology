@@ -1540,7 +1540,7 @@ function DJRequestPage() {
               <Disc3 size={23} className={current ? 'animate-[spin_3s_linear_infinite]' : ''} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white">CURRENT SETUP · HILLVIEW CAFE & RESTRO</p>
+              <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white">HILLVIEW CAFE & RESTRO</p>
               <h2 className="mt-1 truncate text-base font-black md:text-lg">{current?.title || 'Nothing playing right now'}</h2>
               <p className="mt-1 text-[11px] font-bold text-white/65">{current ? 'PLAYING LIVE IN THE CAFE' : 'THE DJ WILL APPEAR HERE WHEN THE NEXT SONG STARTS.'}</p>
             </div>
