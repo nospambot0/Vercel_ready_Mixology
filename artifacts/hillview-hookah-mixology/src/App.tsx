@@ -1257,6 +1257,114 @@ function DJSourceLabel() {
   return 'YouTube';
 }
 
+type YouTubeSearchResult = {
+  videoId: string;
+  title: string;
+  channel: string;
+  duration: string;
+  thumbnail: string;
+  url: string;
+};
+
+function YouTubeSearchPicker({
+  onSelect,
+  disabled = false,
+  compact = false,
+}: {
+  onSelect: (result: YouTubeSearchResult) => void;
+  disabled?: boolean;
+  compact?: boolean;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<YouTubeSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/dj/queue?search=${encodeURIComponent(trimmed)}`, {
+          cache: 'no-store',
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && Array.isArray(data.results)) {
+          setResults(data.results);
+          setOpen(true);
+        } else {
+          setResults([]);
+        }
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <div className="relative mt-3">
+      <div className={`flex items-center gap-2 rounded-2xl border border-secondary/30 bg-background/70 px-3 ${compact ? 'min-h-11' : 'min-h-13'}`}>
+        <Youtube size={17} className="shrink-0 text-secondary" />
+        <input
+          type="search"
+          value={query}
+          disabled={disabled}
+          onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+          onFocus={() => { if (results.length) setOpen(true); }}
+          onBlur={() => window.setTimeout(() => setOpen(false), 180)}
+          placeholder="Search YouTube tracks…"
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          autoComplete="off"
+          aria-label="Search YouTube tracks"
+        />
+        {loading && <RefreshCw size={15} className="shrink-0 animate-spin text-muted-foreground" />}
+      </div>
+      {open && query.trim().length >= 2 && (
+        <div className="absolute inset-x-0 top-full z-50 mt-2 max-h-[min(24rem,60vh)] overflow-y-auto rounded-2xl border border-border bg-card p-1.5 shadow-2xl shadow-primary/15">
+          {loading && results.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">Searching YouTube…</div>
+          ) : results.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">No tracks found.</div>
+          ) : (
+            results.map((result) => (
+              <button
+                key={result.videoId}
+                type="button"
+                disabled={disabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => { onSelect(result); setQuery(result.title); setOpen(false); }}
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                <img
+                  src={result.thumbnail}
+                  alt=""
+                  className="h-12 w-20 shrink-0 rounded-lg object-cover"
+                  loading="lazy"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-bold">{result.title}</span>
+                  <span className="mt-1 block truncate text-[10px] text-muted-foreground">
+                    {result.channel || 'YouTube'}{result.duration ? ` · ${result.duration}` : ''}
+                  </span>
+                </span>
+                <Play size={15} className="shrink-0 text-secondary" />
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function playQueueChime(audioContextRef?: { current: AudioContext | null }) {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -1381,7 +1489,9 @@ function DJRequestPage() {
             </label>
  
           </div>
-          <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link</label>
+          <label className="mt-4 block text-xs font-bold">Find a track on YouTube</label>
+          <YouTubeSearchPicker onSelect={(result) => setUrl(result.url)} disabled={adding} />
+          <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link <span className="font-normal text-muted-foreground">(or paste a link)</span></label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
             <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
@@ -2157,6 +2267,8 @@ function DJPage() {
               <SectionEyebrow>STAFF ADD</SectionEyebrow><h3 className="hv-display text-2xl">Add song to queue</h3>
               <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Add a YouTube request directly from the Manage DJ page.</p>
               <input type="text" value={staffRequesterName} onChange={(event) => setStaffRequesterName(event.target.value)} placeholder="Staff name (optional)" maxLength={80} className="mt-4 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" />
+              <p className="mt-4 text-[10px] font-bold tracking-[0.12em] text-secondary">SEARCH YOUTUBE</p>
+              <YouTubeSearchPicker onSelect={(result) => setStaffUrl(result.url)} disabled={staffAdding} compact />
               <div className="mt-2 flex flex-col gap-2 sm:flex-row"><input type="url" required value={staffUrl} onChange={(event) => setStaffUrl(event.target.value)} placeholder="Paste YouTube song link…" className="min-h-11 flex-1 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-secondary" /><button type="submit" disabled={staffAdding} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"><Plus size={15} /> {staffAdding ? 'Adding…' : 'Add Queue'}</button><button type="button" disabled={staffAdding} onClick={() => void addStaffSong(true)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-secondary px-4 text-xs font-black text-secondary-foreground disabled:opacity-50"><Play size={15} /> {staffAdding ? 'Working…' : 'Play Now'}</button></div>
             </form>
             <div className="mb-6 rounded-2xl border border-secondary/20 bg-secondary/5 p-4">
