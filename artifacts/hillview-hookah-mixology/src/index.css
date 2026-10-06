@@ -818,3 +818,298 @@ body {
     }
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MIXOLOGY PRO 2.0 — TRUE VISUAL REDESIGN
+   Obsidian lounge / copper accent / compact responsive workspace.
+   This layer intentionally replaces the original beige presentation.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --background: 24 18% 7%;
+  --foreground: 38 24% 94%;
+  --border: 28 14% 20%;
+  --card: 25 17% 11%;
+  --card-foreground: 38 24% 94%;
+  --card-border: 28 15% 22%;
+  --popover: 25 17% 12%;
+  --popover-foreground: 38 24% 94%;
+  --popover-border: 28 15% 24%;
+  --primary: 36 72% 58%;
+  --primary-foreground: 24 22% 8%;
+  --secondary: 28 14% 18%;
+  --secondary-foreground: 38 24% 94%;
+  --muted: 27 14% 15%;
+  --muted-foreground: 30 10% 64%;
+  --accent: 14 72% 55%;
+  --accent-foreground: 38 24% 94%;
+  --input: 28 14% 25%;
+  --ring: 36 72% 58%;
+  --sidebar: 24 20% 5%;
+  --sidebar-foreground: 38 24% 94%;
+  --sidebar-border: 28 14% 16%;
+  --radius: .85rem;
+}
+
+body {
+  background:
+    radial-gradient(900px 600px at 12% -10%, hsl(36 72% 58% / .10), transparent 62%),
+    radial-gradient(800px 650px at 100% 30%, hsl(14 72% 55% / .07), transparent 62%),
+    linear-gradient(180deg, hsl(24 18% 7%), hsl(24 20% 5%));
+  color: hsl(var(--foreground));
+}
+
+@layer components {
+  .hv-app {
+    min-height: 100dvh;
+    background:
+      radial-gradient(700px 500px at 50% 0%, hsl(36 72% 58% / .045), transparent 70%);
+  }
+
+  .hv-shell {
+    width: min(100% - 32px, 1280px);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Turn the header into a compact command bar. */
+  .hv-app > header {
+    width: min(100% - 32px, 1280px);
+    margin: 18px auto 0;
+    padding: 10px 12px !important;
+    border: 1px solid hsl(var(--border) / .9);
+    border-radius: 18px;
+    background: hsl(25 17% 10% / .82);
+    box-shadow: 0 18px 50px -35px #000, 0 1px 0 hsl(0 0% 100% / .06) inset;
+    backdrop-filter: blur(24px) saturate(130%);
+  }
+
+  .hv-app > header::after { display: none; }
+
+  .hv-app > header a:first-child > span:first-child {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: linear-gradient(145deg, hsl(36 72% 64%), hsl(14 72% 48%));
+    color: #17100a;
+    box-shadow: 0 8px 24px hsl(36 72% 58% / .18);
+  }
+
+  .hv-app > header a:first-child .hv-display {
+    font-size: 1rem;
+    color: hsl(var(--foreground));
+  }
+
+  /* Replace giant editorial whitespace with a responsive workspace. */
+  .hv-app main {
+    width: min(100% - 32px, 1280px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hv-app main > section:first-child {
+    box-shadow: none;
+  }
+
+  .hv-app .hv-surface,
+  .hv-app .rounded-2xl.border,
+  .hv-app .rounded-3xl.border {
+    background:
+      linear-gradient(145deg, hsl(25 17% 13% / .96), hsl(24 18% 9% / .96));
+    border: 1px solid hsl(28 15% 23% / .9);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / .045) inset,
+      0 22px 55px -42px #000;
+    backdrop-filter: blur(18px);
+  }
+
+  .hv-app .hv-surface:hover {
+    border-color: hsl(36 72% 58% / .28);
+    transform: translateY(-1px);
+  }
+
+  /* Headings are now tighter and more product-like. */
+  .hv-app h1 { font-size: clamp(2.4rem, 5vw, 4.8rem); line-height: .98; }
+  .hv-app h2 { line-height: 1.02; }
+  .hv-app .hv-display { text-shadow: none; }
+
+  /* Primary actions look like deliberate controls, not generic buttons. */
+  .hv-app button.bg-primary,
+  .hv-app a.bg-primary,
+  .hv-app button[class*="bg-primary"] {
+    border: 1px solid hsl(36 72% 72% / .22);
+    background: linear-gradient(135deg, hsl(36 72% 62%), hsl(25 74% 52%));
+    color: #1a1007;
+    box-shadow: 0 10px 28px -18px hsl(36 72% 58% / .75);
+    font-weight: 750;
+  }
+
+  .hv-app button.bg-secondary,
+  .hv-app a.bg-secondary {
+    background: hsl(28 14% 18%);
+    border-color: hsl(28 15% 28%);
+  }
+
+  .hv-app button:hover,
+  .hv-app a[role="button"]:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Inputs become dark console controls. */
+  .hv-app input,
+  .hv-app select,
+  .hv-app textarea {
+    min-height: 42px;
+    border-radius: 12px;
+    background: hsl(24 18% 7% / .9);
+    border-color: hsl(28 15% 25%);
+    color: hsl(var(--foreground));
+  }
+
+  .hv-app input::placeholder,
+  .hv-app textarea::placeholder {
+    color: hsl(var(--muted-foreground) / .72);
+  }
+
+  /* Floating bottom console instead of full-width mobile footer bar. */
+  .hv-app nav[aria-label="Primary navigation"] {
+    width: min(620px, calc(100% - 24px));
+    left: 50%;
+    right: auto;
+    bottom: 14px;
+    transform: translateX(-50%);
+    padding: 7px;
+    border: 1px solid hsl(28 15% 27% / .9);
+    border-radius: 20px;
+    background: hsl(24 18% 8% / .88);
+    box-shadow: 0 24px 70px -30px #000, 0 1px 0 hsl(0 0% 100% / .07) inset;
+  }
+
+  .hv-app nav[aria-label="Primary navigation"] > div {
+    max-width: none;
+    gap: 4px;
+  }
+
+  .hv-app nav[aria-label="Primary navigation"] a,
+  .hv-app nav[aria-label="Primary navigation"] button {
+    min-height: 48px;
+    border-radius: 13px;
+    color: hsl(30 10% 67%);
+  }
+
+  .hv-app nav[aria-label="Primary navigation"] a[class*="bg-primary"] {
+    background: linear-gradient(145deg, hsl(36 72% 60%), hsl(22 70% 50%));
+    color: #17100a;
+    box-shadow: 0 8px 24px -15px hsl(36 72% 58% / .8);
+  }
+
+  /* Visitor badge becomes part of the bottom console rather than floating over content. */
+  .hv-app footer {
+    bottom: 84px;
+    pointer-events: none;
+  }
+
+  .hv-app footer > div {
+    background: hsl(24 18% 8% / .78);
+    border-color: hsl(28 15% 23%);
+  }
+
+  /* Compact desktop grids: fewer oversized cards and more useful content per screen. */
+  .hv-app .grid {
+    min-width: 0;
+  }
+
+  .hv-app .grid.gap-8 { gap: 1.25rem; }
+  .hv-app .grid.gap-6 { gap: 1rem; }
+  .hv-app .grid.gap-5 { gap: .9rem; }
+
+  /* Admin/POS feel like a control center. */
+  .hv-app table {
+    background: hsl(24 18% 8% / .55);
+    border: 1px solid hsl(var(--border));
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .hv-app thead {
+    background: hsl(28 14% 14%);
+  }
+
+  .hv-app tbody tr + tr {
+    border-top: 1px solid hsl(var(--border) / .55);
+  }
+
+  /* Dialogs become centered premium panels. */
+  .hv-app [role="dialog"] {
+    background: hsl(25 17% 10% / .96);
+    border-color: hsl(28 15% 27%);
+  }
+
+  @media (max-width: 767px) {
+    .hv-shell,
+    .hv-app main {
+      width: min(100% - 20px, 720px);
+    }
+
+    .hv-app > header {
+      width: calc(100% - 20px);
+      margin-top: 10px;
+      border-radius: 15px;
+      padding: 8px 9px !important;
+    }
+
+    .hv-app > header .text-lg { font-size: .9rem; }
+
+    .hv-app main {
+      padding-top: .5rem;
+    }
+
+    .hv-app h1 { font-size: clamp(2.15rem, 11vw, 3.2rem); }
+    .hv-app h2 { font-size: clamp(1.55rem, 7vw, 2.3rem); }
+
+    .hv-app .hv-surface,
+    .hv-app .rounded-2xl.border,
+    .hv-app .rounded-3xl.border {
+      border-radius: 16px;
+    }
+
+    .hv-app nav[aria-label="Primary navigation"] {
+      width: calc(100% - 16px);
+      bottom: 8px;
+      border-radius: 17px;
+      padding: 5px;
+    }
+
+    .hv-app nav[aria-label="Primary navigation"] a,
+    .hv-app nav[aria-label="Primary navigation"] button {
+      min-height: 46px;
+      padding-left: 4px;
+      padding-right: 4px;
+      font-size: 9px;
+    }
+
+    .hv-app footer {
+      bottom: 72px;
+    }
+
+    .hv-app footer > div {
+      padding: 5px 10px;
+    }
+
+    .hv-app .hv-shell {
+      padding-bottom: 6.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hv-app main {
+      padding-top: .75rem;
+      padding-bottom: 5rem;
+    }
+
+    .hv-app > header {
+      margin-bottom: .75rem;
+    }
+  }
+}
