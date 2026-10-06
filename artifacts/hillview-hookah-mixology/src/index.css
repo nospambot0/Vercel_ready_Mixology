@@ -473,3 +473,66 @@
   .pos-receipt { position: absolute !important; left: 0 !important; top: 0 !important; width: 72mm !important; max-width: 72mm !important; margin: 0 !important; padding: 3mm !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
   .pos-receipt input, .pos-receipt button { display: none !important; }
 }
+
+
+/* Responsive density: keep the interface compact without sacrificing touch targets. */
+@layer components {
+  .hv-shell {
+    padding-left: clamp(.75rem, 2vw, 2rem);
+    padding-right: clamp(.75rem, 2vw, 2rem);
+  }
+
+  .hv-app button {
+    line-height: 1.15;
+  }
+
+  .hv-app input,
+  .hv-app select,
+  .hv-app textarea {
+    max-width: 100%;
+  }
+
+  .hv-app [class*="grid"] {
+    min-width: 0;
+  }
+
+  .hv-app img,
+  .hv-app video {
+    max-width: 100%;
+  }
+
+  @media (max-width: 767px) {
+    .hv-shell {
+      padding-bottom: 5.5rem;
+    }
+
+    .hv-app .gap-8 { gap: 1.25rem; }
+    .hv-app .gap-6 { gap: 1rem; }
+    .hv-app .p-8 { padding: 1.25rem; }
+    .hv-app .p-6 { padding: 1rem; }
+    .hv-app .px-8 { padding-left: 1rem; padding-right: 1rem; }
+    .hv-app .py-8 { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+
+    .hv-app button {
+      max-width: 100%;
+      white-space: normal;
+    }
+
+    .hv-app [role="dialog"] {
+      max-width: calc(100vw - 1rem);
+      max-height: calc(100dvh - 1rem);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hv-shell {
+      padding-bottom: 3rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .hv-shell {
+      width: min(100%, 1240px);
+    }
+  }
+}
