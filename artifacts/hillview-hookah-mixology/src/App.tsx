@@ -455,6 +455,64 @@ function MaintenanceHome() {
   );
 }
 
+const GUEST_NOW_PLAYING_TRACKS = [
+  { title: 'Blinding Lights', artist: 'The Weeknd' },
+  { title: 'As It Was', artist: 'Harry Styles' },
+  { title: 'Golden Hour', artist: 'JVKE' },
+  { title: 'Heat Waves', artist: 'Glass Animals' },
+  { title: 'Until I Found You', artist: 'Stephen Sanchez' },
+  { title: 'Perfect', artist: 'Ed Sheeran' },
+  { title: 'Die With A Smile', artist: 'Lady Gaga & Bruno Mars' },
+  { title: 'Cruel Summer', artist: 'Taylor Swift' },
+  { title: 'Watermelon Sugar', artist: 'Harry Styles' },
+  { title: 'Shape of You', artist: 'Ed Sheeran' },
+];
+
+function GuestNowPlayingBoxes() {
+  const [trackA, setTrackA] = useState(() => GUEST_NOW_PLAYING_TRACKS[Math.floor(Math.random() * GUEST_NOW_PLAYING_TRACKS.length)]);
+  const [trackB, setTrackB] = useState(() => GUEST_NOW_PLAYING_TRACKS[Math.floor(Math.random() * GUEST_NOW_PLAYING_TRACKS.length)]);
+
+  useEffect(() => {
+    const rotate = () => {
+      setTrackA(GUEST_NOW_PLAYING_TRACKS[Math.floor(Math.random() * GUEST_NOW_PLAYING_TRACKS.length)]);
+      setTrackB(GUEST_NOW_PLAYING_TRACKS[Math.floor(Math.random() * GUEST_NOW_PLAYING_TRACKS.length)]);
+    };
+    const timer = window.setInterval(rotate, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const card = (label: string, track: typeof GUEST_NOW_PLAYING_TRACKS[number], testId: string) => (
+    <section className="hv-surface rounded-[2rem] p-5 shadow-sm md:p-6" data-testid={testId}>
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary">
+          <Music2 size={21} />
+        </div>
+        <div className="min-w-0">
+          <SectionEyebrow>NOW PLAYING</SectionEyebrow>
+          <h3 className="hv-display truncate text-2xl md:text-3xl">{label}</h3>
+        </div>
+      </div>
+      <a
+        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist}`)}`}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-5 block rounded-2xl border border-border/70 bg-background/60 p-4 transition hover:border-secondary/50 hover:bg-secondary/5"
+      >
+        <p className="font-semibold">{track.title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{track.artist} · YouTube</p>
+      </a>
+      <p className="mt-3 text-[10px] text-muted-foreground">Updates every 5 minutes</p>
+    </section>
+  );
+
+  return (
+    <section className="mt-8 grid gap-5 md:grid-cols-2" aria-label="Guest now playing">
+      {card('The Average Guy Cafe', trackA, 'guest-now-playing-average-guy-cafe')}
+      {card('Caha by Romeolane', trackB, 'guest-now-playing-caha-romeolane')}
+    </section>
+  );
+}
+
 function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
   const [showDjOverlay, setShowDjOverlay] = useState(true);
   const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
@@ -476,6 +534,7 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
           </div>
         </div>
       </section>
+      <GuestNowPlayingBoxes />
       <section className="py-14 md:py-20">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><SectionEyebrow>START WITH A MOOD</SectionEyebrow><h2 className="hv-display text-4xl md:text-5xl">What sounds good?</h2></div><p className="max-w-xs text-sm leading-6 text-muted-foreground">Tap a starting point, or let the expert take the first pour.</p></div>
         <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{popular.map((taste) => <button key={taste} className="hv-press hv-surface group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-left hover:-translate-y-1 hover:border-secondary" onClick={onFind}><span className="hv-mono text-[10px] text-accent">MOOD</span><span className="hv-display text-2xl">{taste}</span></button>)}</div>
