@@ -1546,6 +1546,7 @@ function DJRequestPage() {
             {current && <span className="shrink-0 rounded-full bg-secondary px-3 py-1 text-[9px] font-black tracking-wider text-secondary-foreground">LIVE</span>}
           </div>
         </section>
+        <GuestNowPlayingBoxes />
         <form onSubmit={addSong} className="hv-surface mt-5 rounded-[2rem] p-5 md:p-7">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name <span className="font-normal text-muted-foreground">(optional)</span>
