@@ -536,3 +536,285 @@
     }
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────
+   MIXOLOGY PRO / ADVANCED UI SYSTEM
+   Premium lounge + modern DJ console visual language.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --mx-glass: hsl(var(--card) / .72);
+  --mx-glass-strong: hsl(var(--card) / .9);
+  --mx-line: hsl(var(--border) / .72);
+  --mx-glow: hsl(var(--secondary) / .18);
+}
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .hv-app {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .hv-app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 500px at 8% -5%, hsl(var(--secondary) / .10), transparent 65%),
+      radial-gradient(700px 500px at 100% 20%, hsl(var(--accent) / .08), transparent 65%),
+      radial-gradient(800px 500px at 50% 110%, hsl(153 40% 30% / .06), transparent 70%);
+  }
+
+  /* Premium surfaces */
+  .hv-surface,
+  .hv-app .rounded-2xl.border,
+  .hv-app .rounded-3xl.border {
+    border-color: hsl(var(--border) / .62);
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / .05) inset,
+      0 18px 50px -34px hsl(0 0% 0% / .55);
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+  }
+
+  .hv-app .rounded-2xl,
+  .hv-app .rounded-3xl {
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease;
+  }
+
+  /* Header */
+  .hv-app > header {
+    position: relative;
+    z-index: 30;
+    border-bottom: 1px solid hsl(var(--border) / .28);
+  }
+
+  .hv-app > header::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    width: min(420px, 45vw);
+    height: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, hsl(var(--secondary) / .55), transparent);
+  }
+
+  /* Brand */
+  .hv-app header a:first-child > span:first-child {
+    box-shadow:
+      0 0 0 1px hsl(var(--secondary) / .12),
+      0 8px 28px hsl(var(--secondary) / .13);
+  }
+
+  /* Hero sections */
+  .hv-app main > section:first-child {
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / .06) inset,
+      0 30px 80px -45px hsl(var(--primary) / .65);
+  }
+
+  .hv-app h1,
+  .hv-app h2,
+  .hv-app h3 {
+    text-wrap: balance;
+  }
+
+  /* Buttons: compact, premium, consistent */
+  .hv-app button,
+  .hv-app a[role="button"] {
+    position: relative;
+    overflow: hidden;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .hv-app button:not(:disabled):hover,
+  .hv-app a[role="button"]:hover {
+    box-shadow: 0 8px 24px -16px hsl(var(--secondary) / .55);
+  }
+
+  .hv-app button:not(:disabled):active,
+  .hv-app a[role="button"]:active {
+    transform: translateY(1px) scale(.985);
+  }
+
+  /* Inputs */
+  .hv-app input,
+  .hv-app select,
+  .hv-app textarea {
+    border-color: hsl(var(--border) / .72);
+    background: hsl(var(--background) / .42);
+    box-shadow: 0 1px 0 hsl(0 0% 100% / .035) inset;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .hv-app input:focus,
+  .hv-app select:focus,
+  .hv-app textarea:focus {
+    border-color: hsl(var(--secondary) / .7);
+    background: hsl(var(--background) / .62);
+    box-shadow: 0 0 0 3px hsl(var(--secondary) / .10);
+  }
+
+  /* Choice / product imagery */
+  .hv-app .ingredient-orb {
+    box-shadow:
+      0 1px 0 hsl(0 0% 100% / .12) inset,
+      0 12px 28px -18px hsl(0 0% 0% / .75);
+  }
+
+  .hv-app .ingredient-orb:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Navigation dock */
+  .hv-app nav[aria-label="Primary navigation"] {
+    border-color: hsl(var(--border) / .58);
+    background: hsl(var(--background) / .78);
+    box-shadow:
+      0 20px 55px -30px hsl(0 0% 0% / .8),
+      0 1px 0 hsl(0 0% 100% / .06) inset;
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+  }
+
+  .hv-app nav[aria-label="Primary navigation"] a,
+  .hv-app nav[aria-label="Primary navigation"] button {
+    min-height: 44px;
+  }
+
+  .hv-app nav[aria-label="Primary navigation"] a[class*="bg-primary"] {
+    box-shadow: 0 7px 20px -12px hsl(var(--secondary) / .75);
+  }
+
+  /* Tables / admin areas */
+  .hv-app table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .hv-app thead th {
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .hv-app tbody tr {
+    transition: background-color 140ms ease;
+  }
+
+  .hv-app tbody tr:hover {
+    background: hsl(var(--secondary) / .045);
+  }
+
+  /* Dialogs / sheets */
+  .hv-app [role="dialog"] {
+    border: 1px solid hsl(var(--border) / .72);
+    box-shadow:
+      0 35px 100px -45px hsl(0 0% 0% / .9),
+      0 1px 0 hsl(0 0% 100% / .07) inset;
+    backdrop-filter: blur(22px) saturate(125%);
+    -webkit-backdrop-filter: blur(22px) saturate(125%);
+  }
+
+  /* Make dense admin layouts feel deliberate */
+  .hv-app .hv-mono {
+    letter-spacing: .12em;
+    font-size: .64rem;
+  }
+
+  .hv-app .hv-display {
+    text-shadow: 0 2px 24px hsl(0 0% 0% / .12);
+  }
+
+  /* Scrollbars */
+  .hv-app * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--secondary) / .45) transparent;
+  }
+
+  .hv-app *::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  .hv-app *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hv-app *::-webkit-scrollbar-thumb {
+    background: hsl(var(--secondary) / .38);
+    border-radius: 999px;
+  }
+
+  @media (max-width: 767px) {
+    .hv-app .hv-display {
+      letter-spacing: -.045em;
+    }
+
+    .hv-app main > section:first-child {
+      border-radius: 1.5rem;
+    }
+
+    .hv-app .rounded-2xl {
+      border-radius: 1rem;
+    }
+
+    .hv-app .rounded-3xl {
+      border-radius: 1.35rem;
+    }
+
+    .hv-app nav[aria-label="Primary navigation"] {
+      padding-left: .5rem;
+      padding-right: .5rem;
+    }
+
+    .hv-app nav[aria-label="Primary navigation"] a,
+    .hv-app nav[aria-label="Primary navigation"] button {
+      min-height: 46px;
+      font-size: 9px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hv-app .hv-surface:hover {
+      border-color: hsl(var(--secondary) / .28);
+      box-shadow:
+        0 1px 0 hsl(0 0% 100% / .06) inset,
+        0 24px 55px -38px hsl(var(--secondary) / .28);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .hv-app *,
+    .hv-app *::before,
+    .hv-app *::after {
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+    }
+  }
+}
