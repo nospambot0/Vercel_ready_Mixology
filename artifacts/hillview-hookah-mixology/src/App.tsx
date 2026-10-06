@@ -1727,27 +1727,47 @@ function DJPage() {
     let ducked = false;
     let audio: HTMLAudioElement | null = null;
     let fadeTimer: number | null = null;
+    let duckRetryTimer: number | null = null;
     let fadeStarted = false;
     let fallbackTimer: number | null = null;
     let finished = false;
 
     const duckYouTube = () => {
       try {
-        if (!playerRef.current?.setVolume) return;
-        if (previousVolume === null && playerRef.current.getVolume) {
-          const currentVolume = Number(playerRef.current.getVolume());
+        const player = playerRef.current;
+        if (!player?.setVolume) return false;
+        if (previousVolume === null && player.getVolume) {
+          const currentVolume = Number(player.getVolume());
           if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
         }
         if (previousVolume !== null) {
-          playerRef.current.setVolume(Math.max(0, Math.round(previousVolume * 0.35)));
+          player.setVolume(Math.max(0, Math.round(previousVolume * 0.35)));
           ducked = true;
+          return true;
         }
       } catch {}
+      return false;
+    };
+
+    const ensureMusicDucked = () => {
+      if (ducked) return;
+      if (duckYouTube()) return;
+      if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
+      const started = performance.now();
+      duckRetryTimer = window.setInterval(() => {
+        if (ducked || performance.now() - started > 3000) {
+          if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
+          duckRetryTimer = null;
+          return;
+        }
+        duckYouTube();
+      }, 100);
     };
 
     const restoreMusic = () => {
       try {
         if (fadeTimer !== null) window.clearInterval(fadeTimer);
+        if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
         if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
         if (audio) {
           audio.onended = null;
@@ -1789,7 +1809,9 @@ function DJPage() {
       restoreMusic();
     };
 
-    duckYouTube();
+    // Duck immediately when possible, then keep retrying until the YouTube iframe is ready.
+    // This covers the case where INTRO is pressed while the iframe is still initializing.
+    ensureMusicDucked();
 
     try {
       audio = new Audio('https://raw.githubusercontent.com/nospambot0/Vercel_ready_Mixology/main/artifacts/hillview-hookah-mixology/public/ElevenLabs_2026-10-06T17_43_27_Benne%20-%20Young%20South%20Indian%20Companion_pvc_sp100_s35_sb56_v4.mp3');
