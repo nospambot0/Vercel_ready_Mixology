@@ -500,7 +500,12 @@ function GuestNowPlayingBoxes() {
   return (
     <section className="mt-7 grid gap-5" aria-label="Guest now playing">
       {card('The Average Guy Cafe', trackA, 'guest-now-playing-average-guy-cafe')}
-      {card('Caha by Romeolane', trackB, 'guest-now-playing-caha-romeolane')}
+      <div className="relative">
+        <span className="pointer-events-none absolute right-5 top-5 z-10 rounded-full border border-secondary/50 bg-primary px-3 py-1 font-mono text-[9px] font-black tracking-[0.18em] text-secondary shadow-lg shadow-primary/15">
+          PREMIUM
+        </span>
+        {card('Caha by Romeolane', trackB, 'guest-now-playing-caha-romeolane')}
+      </div>
     </section>
   );
 }
