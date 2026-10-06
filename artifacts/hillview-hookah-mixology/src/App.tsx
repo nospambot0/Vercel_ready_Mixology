@@ -1396,7 +1396,7 @@ function YouTubeSearchPicker({
                 type="button"
                 disabled={disabled}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => { onSelect(result); setQuery(result.title); setOpen(false); }}
+                onClick={() => { onSelect(result); setQuery(''); setResults([]); setOpen(false); }}
                 className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted disabled:opacity-50"
               >
                 <img
