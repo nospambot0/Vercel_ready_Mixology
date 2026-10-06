@@ -1792,7 +1792,7 @@ function DJPage() {
     duckYouTube();
 
     try {
-      audio = new Audio('/intro.mp3');
+      audio = new Audio('/ElevenLabs_2026-10-06T17_43_27_Benne%20-%20Young%20South%20Indian%20Companion_pvc_sp100_s35_sb56_v4.mp3');
       audio.preload = 'auto';
       audio.volume = 1;
       audio.ontimeupdate = () => {
