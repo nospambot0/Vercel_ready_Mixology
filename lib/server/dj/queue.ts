@@ -98,12 +98,12 @@ function autoModeQuery(mode: AutoMode): string {
   return 'latest Bollywood songs 2026 official';
 }
 
-async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; title: string }>> {
+async function searchYouTube(query: string, maxResults = 30): Promise<Array<{ videoId: string; title: string; channel: string; duration: string }>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
   try {
-    const query = encodeURIComponent(autoModeQuery(mode));
-    const response: any = await fetch(`https://www.youtube.com/results?search_query=${query}`, {
+    const encodedQuery = encodeURIComponent(query);
+    const response: any = await fetch(`https://www.youtube.com/results?search_query=${encodedQuery}`, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36',
@@ -112,21 +112,30 @@ async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; t
     });
     if (!response.ok) throw new Error('YouTube search is temporarily unavailable.');
     const html = await response.text();
-    const results: Array<{ videoId: string; title: string }> = [];
+    const results: Array<{ videoId: string; title: string; channel: string; duration: string; videoIdRaw?: string }> = [];
     const seen = new Set<string>();
-    const rendererRe = /"videoRenderer":\{([\s\S]*?)\}\s*,\s*"trackingParams"/g;
+    const rendererRe = /\"videoRenderer\":\{([\s\S]*?)\}\s*,\s*\"trackingParams\"/g;
     let match: RegExpExecArray | null;
-    while ((match = rendererRe.exec(html)) && results.length < 30) {
+    while ((match = rendererRe.exec(html)) && results.length < maxResults) {
       const block = match[1];
-      const idMatch = block.match(/"videoId":"([A-Za-z0-9_-]{11})"/);
-      const titleMatch = block.match(/"title":\{"runs":\[\{"text":"((?:\\.|[^"\\])*)"/);
+      const idMatch = block.match(/\"videoId\":\"([A-Za-z0-9_-]{11})\"/);
+      const titleMatch = block.match(/\"title\":\{\"runs\":\[\{\"text\":\"((?:\\.|[^\"\\])*)\"/);
       if (!idMatch || !titleMatch) continue;
       let title = titleMatch[1];
-      try { title = JSON.parse('"' + title + '"'); } catch {}
+      try { title = JSON.parse('\"' + title + '\"'); } catch {}
       title = title.replace(/\\u[\dA-Fa-f]{4}/g, '').trim();
       if (!title || seen.has(idMatch[1]) || looksDisturbing(title)) continue;
+      const channelMatch = block.match(/\"ownerText\":\{\"runs\":\[\{\"text\":\"((?:\\.|[^\"\\])*)\"/);
+      const durationMatch = block.match(/\"lengthText\":\{\"simpleText\":\"([^\"]+)\"/);
+      let channel = channelMatch?.[1] || '';
+      try { channel = JSON.parse('\"' + channel + '\"'); } catch {}
+      results.push({
+        videoId: idMatch[1],
+        title: title.slice(0, 300),
+        channel: channel.slice(0, 120),
+        duration: durationMatch?.[1]?.slice(0, 20) || '',
+      });
       seen.add(idMatch[1]);
-      results.push({ videoId: idMatch[1], title: title.slice(0, 300) });
     }
     return results;
   } finally {
@@ -134,8 +143,9 @@ async function searchYouTube(mode: AutoMode): Promise<Array<{ videoId: string; t
   }
 }
 
+
 async function addAutoTracks(sql: any, mode: AutoMode): Promise<{ added: number; skipped: number; titles: string[] }> {
-  const candidates = await searchYouTube(mode);
+  const candidates = await searchYouTube(autoModeQuery(mode), 30);
   const target = candidates.slice(0, 20);
   const titles: string[] = [];
   let added = 0;
@@ -168,6 +178,21 @@ export default async function handler(req: any, res: any): Promise<void> {
     const sql = db();
     await ensureTable(sql);
     if (req.method === 'GET') {
+      const searchQuery = typeof req.query?.search === 'string' ? req.query.search.trim().slice(0, 100) : '';
+      if (searchQuery.length >= 2) {
+        const results = await searchYouTube(searchQuery, 12);
+        json(res, 200, {
+          results: results.map((result) => ({
+            videoId: result.videoId,
+            title: result.title,
+            channel: result.channel,
+            duration: result.duration,
+            thumbnail: `https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg`,
+            url: `https://www.youtube.com/watch?v=${result.videoId}`,
+          })),
+        });
+        return;
+      }
       const rows = await sql`SELECT id, source, url, title, requester_name AS "requesterName", requester_url AS "requesterUrl", status, created_at AS "createdAt" FROM dj_queue WHERE source = 'youtube' AND status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
       // Backfill titles for songs that were added before title lookup was enabled.
       for (const row of rows as any[]) {
