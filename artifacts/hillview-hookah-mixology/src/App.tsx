@@ -2871,6 +2871,7 @@ function App() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AgeGate />
+      <GuestAccessGate />
       <AppContent
           choice={choice}
           setChoice={setChoice}
