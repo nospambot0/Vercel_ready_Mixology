@@ -2844,46 +2844,6 @@ function AgeGate() {
   );
 }
 
-function GuestAccessGate() {
-  const [location] = useLocation();
-  const isStaffRoute = location === '/manage' || location.startsWith('/manage/');
-  const disabledUntil = new Date('2026-10-06T15:20:31Z').getTime();
-  const [locked, setLocked] = useState(() => Date.now() < disabledUntil);
-
-  useEffect(() => {
-    if (isStaffRoute) {
-      setLocked(false);
-      return;
-    }
-    const update = () => setLocked(Date.now() < disabledUntil);
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, [isStaffRoute, disabledUntil]);
-
-  if (isStaffRoute || !locked) return null;
-
-  const remainingMinutes = Math.max(1, Math.ceil((disabledUntil - Date.now()) / 60000));
-
-  return (
-    <div className="fixed inset-0 z-[110] flex min-h-screen items-center justify-center bg-primary/95 px-5 py-8 text-primary-foreground backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="guest-lock-title">
-      <div className="w-full max-w-md rounded-[2rem] border border-primary-foreground/15 bg-primary p-7 text-center shadow-2xl md:p-9">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
-          <Settings2 size={25} />
-        </div>
-        <SectionEyebrow>MIXOLOGY PRO / TEMPORARILY CLOSED</SectionEyebrow>
-        <h1 id="guest-lock-title" className="hv-display text-4xl md:text-5xl">Guest access paused</h1>
-        <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-primary-foreground/70">
-          Guest access is temporarily disabled while we perform a quick update. Please try again in about {remainingMinutes} minute{remainingMinutes === 1 ? '' : 's'}.
-        </p>
-        <div className="mt-7 rounded-2xl bg-primary-foreground/10 px-4 py-3 text-xs font-semibold text-primary-foreground/75">
-          Staff access remains available.
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AppContent({
   choice,
   setChoice,
@@ -2941,7 +2901,6 @@ function App() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AgeGate />
-      <GuestAccessGate />
       <AppContent
           choice={choice}
           setChoice={setChoice}
