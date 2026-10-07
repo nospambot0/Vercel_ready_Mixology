@@ -540,10 +540,13 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
       {showDjOverlay && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 px-5 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="home-dj-overlay-title">
           <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-secondary/30 bg-primary p-7 text-primary-foreground shadow-2xl shadow-black/40 md:p-9">
-            <button type="button" onClick={() => setShowDjOverlay(false)} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-xl text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground" aria-label="Close music overlay" data-testid="button-close-dj-overlay">
+            <button type="button" onClick={() => setShowDjOverlay(false)} className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl bg-black/25 text-primary-foreground/70 backdrop-blur-sm hover:bg-black/40 hover:text-primary-foreground" aria-label="Close music overlay" data-testid="button-close-dj-overlay">
               <X size={19} />
             </button>
-            <div className="pr-10">
+            <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-black/20 shadow-xl">
+              <img src="/hillview-weekday-offer.jpg" alt="Hillview weekday offer" className="block aspect-[9/16] max-h-[52vh] w-full object-cover" loading="eager" />
+            </div>
+            <div className="pr-2">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
                 <Music2 size={25} />
               </div>
