@@ -20,6 +20,8 @@ async function ensureTable(sql:any) {
   await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL, played_at TIMESTAMPTZ)`;
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+  await sql`CREATE TABLE IF NOT EXISTS dj_settings (id INTEGER PRIMARY KEY, volume INTEGER NOT NULL DEFAULT 100)`;
+  await sql`INSERT INTO dj_settings (id, volume) VALUES (1, 100) ON CONFLICT (id) DO NOTHING`;
 }
 
 async function state(sql:any) {
@@ -34,7 +36,13 @@ export default async function handler(req:any,res:any):Promise<void> {
     if(req.method!=='POST'){ json(res,405,{error:'Method not allowed'}); return; }
     const body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body??{});
     const action=typeof body.action==='string'?body.action:''; const id=typeof body.id==='string'?body.id:'';
-    if(action==='play') {
+    if(action==='set-volume') {
+      const volume=Number(body.volume);
+      if(!Number.isFinite(volume)){json(res,400,{error:'A valid volume is required.'});return;}
+      const next=Math.max(0,Math.min(100,Math.round(volume)));
+      await sql`UPDATE dj_settings SET volume=${next} WHERE id=1`;
+      json(res,200,{volume:next}); return;
+    } else if(action==='play') {
       if(!id){json(res,400,{error:'A queue item is required.'});return;}
       await sql`UPDATE dj_queue SET status='played', played_at=NOW() WHERE status='playing'`;
       await sql`UPDATE dj_queue SET status='playing', played_at=NOW() WHERE id=${id} AND status='queued'`;
