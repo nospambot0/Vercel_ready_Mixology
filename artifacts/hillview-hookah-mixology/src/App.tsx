@@ -1609,10 +1609,19 @@ function DJPage() {
   const [hkvPlaying, setHkvPlaying] = useState(false);
   const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
   const [customAnnouncementText, setCustomAnnouncementText] = useState('');
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(50);
+  const volumeRef = useRef(50);
+
+  const applyServerVolume = (value: number) => {
+    const nextVolume = Math.max(0, Math.min(100, Math.round(value)));
+    volumeRef.current = nextVolume;
+    setVolume(nextVolume);
+    try { playerRef.current?.setVolume?.(nextVolume); } catch {}
+  };
 
   const setDjVolume = (value: number) => {
     const nextVolume = Math.max(0, Math.min(100, Math.round(value)));
+    volumeRef.current = nextVolume;
     setVolume(nextVolume);
     try {
       playerRef.current?.setVolume?.(nextVolume);
@@ -2257,8 +2266,7 @@ function DJPage() {
       const nextQueue = Array.isArray(data.queue) ? data.queue : [];
       if (Number.isFinite(Number(data.volume))) {
         const serverVolume = Math.max(0, Math.min(100, Math.round(Number(data.volume))));
-        setVolume(serverVolume);
-        try { playerRef.current?.setVolume?.(serverVolume); } catch {}
+        applyServerVolume(serverVolume)
       }
       const previousIds = lastQueueIdsRef.current;
       if (previousIds) {
@@ -2293,8 +2301,17 @@ function DJPage() {
     window.addEventListener('click', unlockAudio);
     void loadQueue();
     const timer = window.setInterval(() => void loadQueue(), 2000);
+    const volumeTimer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/dj/queue?volume=1&ts=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (Number.isFinite(Number(data.volume))) applyServerVolume(Number(data.volume));
+      } catch {}
+    }, 750);
     return () => {
       window.clearInterval(timer);
+      window.clearInterval(volumeTimer);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('click', unlockAudio);
     };
@@ -2379,7 +2396,7 @@ function DJPage() {
         events: {
           onReady: () => {
             playerReadyRef.current = true;
-            try { playerRef.current?.setVolume?.(volume); } catch {}
+            try { playerRef.current?.setVolume?.(volumeRef.current); } catch {}
             setPlayerReady(true);
           },
           onStateChange: (event: any) => {
