@@ -1609,6 +1609,15 @@ function DJPage() {
   const [hkvPlaying, setHkvPlaying] = useState(false);
   const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
   const [customAnnouncementText, setCustomAnnouncementText] = useState('');
+  const [volume, setVolume] = useState(100);
+
+  const setDjVolume = (value: number) => {
+    const nextVolume = Math.max(0, Math.min(100, Math.round(value)));
+    setVolume(nextVolume);
+    try {
+      playerRef.current?.setVolume?.(nextVolume);
+    } catch {}
+  };
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -2359,6 +2368,11 @@ function DJPage() {
         events: {
           onReady: () => {
             playerReadyRef.current = true;
+            try {
+              const currentVolume = Number(playerRef.current?.getVolume?.());
+              if (Number.isFinite(currentVolume)) setVolume(Math.max(0, Math.min(100, Math.round(currentVolume))));
+              playerRef.current?.setVolume?.(volume);
+            } catch {}
             setPlayerReady(true);
           },
           onStateChange: (event: any) => {
@@ -2497,6 +2511,25 @@ function DJPage() {
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
             <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <div className="mt-4 rounded-2xl border border-border/70 bg-background/40 px-4 py-3" data-testid="dj-volume-control">
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="dj-volume" className="text-xs font-bold">Music Volume</label>
+                <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-bold">{volume}%</span>
+              </div>
+              <input
+                id="dj-volume"
+                data-testid="slider-dj-volume"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={volume}
+                onChange={(event) => setDjVolume(Number(event.target.value))}
+                className="mt-3 h-2 w-full cursor-pointer accent-secondary"
+                aria-label="Music volume"
+              />
+              <div className="mt-1 flex justify-between text-[9px] text-muted-foreground"><span>0%</span><span>100%</span></div>
+            </div>
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
