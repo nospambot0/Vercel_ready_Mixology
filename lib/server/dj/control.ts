@@ -20,8 +20,10 @@ async function ensureTable(sql:any) {
   await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL, played_at TIMESTAMPTZ)`;
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
-  await sql`CREATE TABLE IF NOT EXISTS dj_settings (id INTEGER PRIMARY KEY, volume INTEGER NOT NULL DEFAULT 100)`;
-  await sql`INSERT INTO dj_settings (id, volume) VALUES (1, 100) ON CONFLICT (id) DO NOTHING`;
+  await sql`CREATE TABLE IF NOT EXISTS dj_settings (id INTEGER PRIMARY KEY, volume INTEGER NOT NULL DEFAULT 50)`;
+  await sql`INSERT INTO dj_settings (id, volume) VALUES (1, 50) ON CONFLICT (id) DO NOTHING`;
+  await sql`ALTER TABLE dj_settings ADD COLUMN IF NOT EXISTS default_migrated BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`UPDATE dj_settings SET volume = 50, default_migrated = TRUE WHERE id = 1 AND default_migrated = FALSE`;
 }
 
 async function state(sql:any) {
