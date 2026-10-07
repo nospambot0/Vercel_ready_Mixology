@@ -86,6 +86,8 @@ async function ensureTable(sql: any) {
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+  await sql`CREATE TABLE IF NOT EXISTS dj_settings (id INTEGER PRIMARY KEY, volume INTEGER NOT NULL DEFAULT 100)`;
+  await sql`INSERT INTO dj_settings (id, volume) VALUES (1, 100) ON CONFLICT (id) DO NOTHING`;
 }
 
 
@@ -205,7 +207,9 @@ export default async function handler(req: any, res: any): Promise<void> {
           }
         }
       }
-      json(res, 200, { current: rows.find((row:any) => row.status === 'playing') ?? null, queue: rows.filter((row:any) => row.status === 'queued') });
+      const settings = await sql`SELECT volume FROM dj_settings WHERE id = 1 LIMIT 1`;
+      const volume = Math.max(0, Math.min(100, Number(settings[0]?.volume ?? 100)));
+      json(res, 200, { current: rows.find((row:any) => row.status === 'playing') ?? null, queue: rows.filter((row:any) => row.status === 'queued'), volume });
       return;
     }
     if (req.method === 'POST') {
