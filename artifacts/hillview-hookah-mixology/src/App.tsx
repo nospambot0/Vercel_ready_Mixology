@@ -1626,7 +1626,7 @@ function DJPage() {
     try {
       playerRef.current?.setVolume?.(nextVolume);
     } catch {}
-    void fetch('/api/dj/control', {
+    void fetch('/api/dj/volume', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -2303,7 +2303,7 @@ function DJPage() {
     const timer = window.setInterval(() => void loadQueue(), 2000);
     const volumeTimer = window.setInterval(async () => {
       try {
-        const response = await fetch(`/api/dj/queue?volume=1&ts=${Date.now()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/dj/volume?ts=${Date.now()}`, { cache: 'no-store' });
         if (!response.ok) return;
         const data = await response.json();
         if (Number.isFinite(Number(data.volume))) applyServerVolume(Number(data.volume));
