@@ -544,7 +544,7 @@ function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurpr
               <X size={19} />
             </button>
             <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-black/20 shadow-xl">
-              <img src="/hillview-weekday-offer.jpg" alt="Hillview weekday offer" className="block aspect-[9/16] max-h-[52vh] w-full object-cover" loading="eager" />
+              <img src="/hillview-weekday-offer.jpg?v=20261007" alt="Hillview weekday offer" className="block max-h-[62vh] w-full object-contain" loading="eager" decoding="async" />
             </div>
             <div className="pr-2">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
