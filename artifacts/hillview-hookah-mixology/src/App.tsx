@@ -1617,6 +1617,12 @@ function DJPage() {
     try {
       playerRef.current?.setVolume?.(nextVolume);
     } catch {}
+    void fetch('/api/dj/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'set-volume', volume: nextVolume }),
+    }).catch(() => {});
   };
 
   const playAdvAnnouncement = () => {
@@ -2249,6 +2255,11 @@ function DJPage() {
       void checkAdvTrigger();
       const nextCurrent = data.current ?? null;
       const nextQueue = Array.isArray(data.queue) ? data.queue : [];
+      if (Number.isFinite(Number(data.volume))) {
+        const serverVolume = Math.max(0, Math.min(100, Math.round(Number(data.volume))));
+        setVolume(serverVolume);
+        try { playerRef.current?.setVolume?.(serverVolume); } catch {}
+      }
       const previousIds = lastQueueIdsRef.current;
       if (previousIds) {
         const hasNewRequest = nextQueue.some((item: DJItem) => !previousIds.has(item.id));
@@ -2368,11 +2379,7 @@ function DJPage() {
         events: {
           onReady: () => {
             playerReadyRef.current = true;
-            try {
-              const currentVolume = Number(playerRef.current?.getVolume?.());
-              if (Number.isFinite(currentVolume)) setVolume(Math.max(0, Math.min(100, Math.round(currentVolume))));
-              playerRef.current?.setVolume?.(volume);
-            } catch {}
+            try { playerRef.current?.setVolume?.(volume); } catch {}
             setPlayerReady(true);
           },
           onStateChange: (event: any) => {
