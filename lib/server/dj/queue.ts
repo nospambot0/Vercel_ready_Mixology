@@ -86,10 +86,6 @@ async function ensureTable(sql: any) {
   await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
   await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
-  await sql`CREATE TABLE IF NOT EXISTS dj_settings (id INTEGER PRIMARY KEY, volume INTEGER NOT NULL DEFAULT 50)`;
-  await sql`INSERT INTO dj_settings (id, volume) VALUES (1, 50) ON CONFLICT (id) DO NOTHING`;
-  await sql`ALTER TABLE dj_settings ADD COLUMN IF NOT EXISTS default_migrated BOOLEAN NOT NULL DEFAULT FALSE`;
-  await sql`UPDATE dj_settings SET volume = 50, default_migrated = TRUE WHERE id = 1 AND default_migrated = FALSE`;
 }
 
 
@@ -198,20 +194,8 @@ export default async function handler(req: any, res: any): Promise<void> {
         return;
       }
       const rows = await sql`SELECT id, source, url, title, requester_name AS "requesterName", requester_url AS "requesterUrl", status, created_at AS "createdAt" FROM dj_queue WHERE source = 'youtube' AND status IN ('queued','playing') ORDER BY CASE WHEN status='playing' THEN 0 ELSE 1 END, created_at ASC LIMIT 100`;
-      // Backfill titles for songs that were added before title lookup was enabled.
-      for (const row of rows as any[]) {
-        const fallback = titleFor();
-        if (row.title === fallback) {
-          const title = await fetchTrackTitle(row.url, row.source as Source);
-          if (title !== fallback) {
-            row.title = title;
-            await sql`UPDATE dj_queue SET title = ${title} WHERE id = ${row.id}`;
-          }
-        }
-      }
-      const settings = await sql`SELECT volume FROM dj_settings WHERE id = 1 LIMIT 1`;
-      const volume = Math.max(0, Math.min(100, Number(settings[0]?.volume ?? 100)));
-      json(res, 200, { current: rows.find((row:any) => row.status === 'playing') ?? null, queue: rows.filter((row:any) => row.status === 'queued'), volume });
+      // Keep the queue GET path fast: external YouTube metadata lookups must not block DJ polling.
+      json(res, 200, { current: rows.find((row:any) => row.status === 'playing') ?? null, queue: rows.filter((row:any) => row.status === 'queued') });
       return;
     }
     if (req.method === 'POST') {
