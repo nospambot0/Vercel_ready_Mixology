@@ -2266,31 +2266,32 @@ function DJPage() {
 
   useEffect(() => {
     const unlockAudio = () => {
-      if (audioUnlockedRef.current) return;
       try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
-        const context = audioContextRef.current ?? new AudioContextClass();
-        audioContextRef.current = context;
-        if (context.state === 'suspended') void context.resume();
-        audioUnlockedRef.current = true;
-      } catch {}
-      try {
-        // A real tap/click is also the safest way to satisfy YouTube's
-        // autoplay policy. Keep listening until the player is actually
-        // ready, so an early tap cannot consume the one-time unlock.
+        if (!audioUnlockedRef.current) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const context = audioContextRef.current ?? new AudioContextClass();
+            audioContextRef.current = context;
+            if (context.state === 'suspended') void context.resume();
+            audioUnlockedRef.current = true;
+          }
+        }
+
+        // The first real tap/click is also used to unlock YouTube playback.
+        // Keep listening until the player is ready so an early tap cannot
+        // accidentally consume the only available user gesture.
         if (playerReadyRef.current && playerRef.current && !youtubeUnlockedRef.current) {
           playerRef.current.playVideo?.();
           youtubeUnlockedRef.current = true;
         }
+
         if (audioUnlockedRef.current && youtubeUnlockedRef.current) {
           window.removeEventListener('touchstart', unlockAudio);
           window.removeEventListener('click', unlockAudio);
         }
       } catch {}
-
-      } catch {}
     };
+
     window.addEventListener('touchstart', unlockAudio, { passive: true });
     window.addEventListener('click', unlockAudio);
     void loadQueue();
