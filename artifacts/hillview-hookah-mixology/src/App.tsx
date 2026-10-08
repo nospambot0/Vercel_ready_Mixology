@@ -2401,8 +2401,11 @@ function DJPage() {
               void control('next');
             }
           },
+          onAutoplayBlocked: () => {
+            setNotice('YouTube blocked automatic playback. Press Play once on the DJ device to unlock playback.');
+          },
           onError: (event: any) => {
-            if ([100, 101, 150].includes(event.data)) {
+            if ([5, 100, 101, 150, 153].includes(event.data)) {
               if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
               setNotice('This YouTube video cannot be played in the embedded player. Skipping it.');
               void control('next');
