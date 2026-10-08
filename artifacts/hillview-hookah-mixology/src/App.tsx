@@ -2224,6 +2224,7 @@ function DJPage() {
   const queuePollInFlightRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioUnlockedRef = useRef(false);
+  const youtubeUnlockedRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
@@ -2273,6 +2274,15 @@ function DJPage() {
         audioContextRef.current = context;
         if (context.state === 'suspended') void context.resume();
         audioUnlockedRef.current = true;
+        // A real tap/click is also the safest way to satisfy YouTube's
+        // autoplay policy. Once a DJ device has interacted with the page,
+        // allow the current YouTube player to start/resume normally.
+        if (playerReadyRef.current && playerRef.current && !youtubeUnlockedRef.current) {
+          try {
+            playerRef.current.playVideo?.();
+            youtubeUnlockedRef.current = true;
+          } catch {}
+        }
         window.removeEventListener('touchstart', unlockAudio);
         window.removeEventListener('click', unlockAudio);
       } catch {}
@@ -2401,9 +2411,6 @@ function DJPage() {
               void control('next');
             }
           },
-          onAutoplayBlocked: () => {
-            setNotice('YouTube blocked automatic playback. Press Play once on the DJ device to unlock playback.');
-          },
           onError: (event: any) => {
             if ([5, 100, 101, 150, 153].includes(event.data)) {
               if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
@@ -2464,6 +2471,14 @@ function DJPage() {
     } catch {}
     activeVideoIdRef.current = videoId;
     playerRef.current.loadVideoById(videoId);
+    // If the browser has already seen a user gesture on this DJ page,
+    // immediately resume the newly loaded track without showing an
+    // autoplay warning or requiring another tap.
+    if (youtubeUnlockedRef.current) {
+      window.setTimeout(() => {
+        try { playerRef.current?.playVideo?.(); } catch {}
+      }, 0);
+    }
   }, [current?.id, current?.title, playerReady]);
 
   useEffect(() => {
