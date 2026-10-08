@@ -2274,17 +2274,21 @@ function DJPage() {
         audioContextRef.current = context;
         if (context.state === 'suspended') void context.resume();
         audioUnlockedRef.current = true;
+      } catch {}
+      try {
         // A real tap/click is also the safest way to satisfy YouTube's
-        // autoplay policy. Once a DJ device has interacted with the page,
-        // allow the current YouTube player to start/resume normally.
+        // autoplay policy. Keep listening until the player is actually
+        // ready, so an early tap cannot consume the one-time unlock.
         if (playerReadyRef.current && playerRef.current && !youtubeUnlockedRef.current) {
-          try {
-            playerRef.current.playVideo?.();
-            youtubeUnlockedRef.current = true;
-          } catch {}
+          playerRef.current.playVideo?.();
+          youtubeUnlockedRef.current = true;
         }
-        window.removeEventListener('touchstart', unlockAudio);
-        window.removeEventListener('click', unlockAudio);
+        if (audioUnlockedRef.current && youtubeUnlockedRef.current) {
+          window.removeEventListener('touchstart', unlockAudio);
+          window.removeEventListener('click', unlockAudio);
+        }
+      } catch {}
+
       } catch {}
     };
     window.addEventListener('touchstart', unlockAudio, { passive: true });
