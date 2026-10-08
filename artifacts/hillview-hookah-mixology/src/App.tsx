@@ -1609,30 +1609,6 @@ function DJPage() {
   const [hkvPlaying, setHkvPlaying] = useState(false);
   const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
   const [customAnnouncementText, setCustomAnnouncementText] = useState('');
-  const [volume, setVolume] = useState(50);
-  const volumeRef = useRef(50);
-
-  const applyServerVolume = (value: number) => {
-    const nextVolume = Math.max(0, Math.min(100, Math.round(value)));
-    volumeRef.current = nextVolume;
-    setVolume(nextVolume);
-    try { playerRef.current?.setVolume?.(nextVolume); } catch {}
-  };
-
-  const setDjVolume = (value: number) => {
-    const nextVolume = Math.max(0, Math.min(100, Math.round(value)));
-    volumeRef.current = nextVolume;
-    setVolume(nextVolume);
-    try {
-      playerRef.current?.setVolume?.(nextVolume);
-    } catch {}
-    void fetch('/api/dj/volume', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ action: 'set-volume', volume: nextVolume }),
-    }).catch(() => {});
-  };
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -2251,11 +2227,15 @@ function DJPage() {
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
+  const activeVideoIdRef = useRef<string | null>(null);
+  const queueMutationAtRef = useRef(0);
+  const advanceInFlightRef = useRef(false);
   const advPreviousVolumeRef = useRef<number | null>(null);
   const advVolumeDuckedRef = useRef(false);
 
   const loadQueue = async () => {
     if (queuePollInFlightRef.current) return;
+    const requestStartedAt = Date.now();
     queuePollInFlightRef.current = true;
     try {
       const response = await fetch(`/api/dj/queue?ts=${Date.now()}`, { cache: 'no-store' });
@@ -2264,10 +2244,9 @@ function DJPage() {
       void checkAdvTrigger();
       const nextCurrent = data.current ?? null;
       const nextQueue = Array.isArray(data.queue) ? data.queue : [];
-      if (Number.isFinite(Number(data.volume))) {
-        const serverVolume = Math.max(0, Math.min(100, Math.round(Number(data.volume))));
-        applyServerVolume(serverVolume)
-      }
+      // Do not let a queue poll that started before a newer staff action
+      // overwrite the newer current track.
+      if (requestStartedAt < queueMutationAtRef.current) return;
       const previousIds = lastQueueIdsRef.current;
       if (previousIds) {
         const hasNewRequest = nextQueue.some((item: DJItem) => !previousIds.has(item.id));
@@ -2276,6 +2255,7 @@ function DJPage() {
       lastQueueIdsRef.current = new Set(nextQueue.map((item: DJItem) => item.id));
       setCurrent(nextCurrent);
       setQueue(nextQueue);
+      activeVideoIdRef.current = nextCurrent ? extractYouTubeId(String(nextCurrent.url || '')) : null;
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Could not load DJ queue.'); }
     finally {
       queuePollInFlightRef.current = false;
@@ -2301,17 +2281,8 @@ function DJPage() {
     window.addEventListener('click', unlockAudio);
     void loadQueue();
     const timer = window.setInterval(() => void loadQueue(), 2000);
-    const volumeTimer = window.setInterval(async () => {
-      try {
-        const response = await fetch(`/api/dj/volume?ts=${Date.now()}`, { cache: 'no-store' });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (Number.isFinite(Number(data.volume))) applyServerVolume(Number(data.volume));
-      } catch {}
-    }, 750);
     return () => {
       window.clearInterval(timer);
-      window.clearInterval(volumeTimer);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('click', unlockAudio);
     };
@@ -2362,6 +2333,9 @@ function DJPage() {
 
 
   const control = async (action: string, id?: string) => {
+    if (action === 'next' && advanceInFlightRef.current) return;
+    queueMutationAtRef.current = Date.now();
+    if (action === 'next') advanceInFlightRef.current = true;
     setWorking(true);
     setNotice('');
     try {
@@ -2373,8 +2347,12 @@ function DJPage() {
       lastQueueIdsRef.current = new Set(nextQueue.map((item: DJItem) => item.id));
       setCurrent(nextCurrent);
       setQueue(nextQueue);
+      activeVideoIdRef.current = nextCurrent ? extractYouTubeId(String(nextCurrent.url || '')) : null;
     } catch (error) { setNotice(error instanceof Error ? error.message : 'DJ action failed.'); }
-    finally { setWorking(false); }
+    finally {
+      setWorking(false);
+      if (action === 'next') window.setTimeout(() => { advanceInFlightRef.current = false; }, 1200);
+    }
   };
 
   useEffect(() => {
@@ -2396,11 +2374,13 @@ function DJPage() {
         events: {
           onReady: () => {
             playerReadyRef.current = true;
-            try { playerRef.current?.setVolume?.(volumeRef.current); } catch {}
             setPlayerReady(true);
           },
           onStateChange: (event: any) => {
             const YTState = (window as any).YT?.PlayerState;
+            const eventVideoId = (() => {
+              try { return String(event.target?.getVideoData?.()?.video_id || '') || null; } catch { return null; }
+            })();
             if (event.data === YTState?.PLAYING) {
               try {
                 const MediaSession = (navigator as any).mediaSession;
@@ -2415,13 +2395,15 @@ function DJPage() {
               } catch {}
             } else if (event.data === YTState?.PAUSED) {
               try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'paused'); } catch {}
-            } else if (event.data === 0) {
+            } else if (event.data === YTState?.ENDED) {
+              if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
               try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'none'); } catch {}
               void control('next');
             }
           },
           onError: (event: any) => {
             if ([100, 101, 150].includes(event.data)) {
+              if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
               setNotice('This YouTube video cannot be played in the embedded player. Skipping it.');
               void control('next');
             }
@@ -2477,6 +2459,7 @@ function DJPage() {
         });
       }
     } catch {}
+    activeVideoIdRef.current = videoId;
     playerRef.current.loadVideoById(videoId);
   }, [current?.id, current?.title, playerReady]);
 
@@ -2535,25 +2518,6 @@ function DJPage() {
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
             <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
-            <div className="mt-4 rounded-2xl border border-border/70 bg-background/40 px-4 py-3" data-testid="dj-volume-control">
-              <div className="flex items-center justify-between gap-3">
-                <label htmlFor="dj-volume" className="text-xs font-bold">Music Volume</label>
-                <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-bold">{volume}%</span>
-              </div>
-              <input
-                id="dj-volume"
-                data-testid="slider-dj-volume"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={volume}
-                onChange={(event) => setDjVolume(Number(event.target.value))}
-                className="mt-3 h-2 w-full cursor-pointer accent-secondary"
-                aria-label="Music volume"
-              />
-              <div className="mt-1 flex justify-between text-[9px] text-muted-foreground"><span>0%</span><span>100%</span></div>
-            </div>
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
