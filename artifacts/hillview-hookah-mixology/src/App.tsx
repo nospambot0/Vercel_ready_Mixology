@@ -2295,7 +2295,7 @@ function DJPage() {
     window.addEventListener('touchstart', unlockAudio, { passive: true });
     window.addEventListener('click', unlockAudio);
     void loadQueue();
-    const timer = window.setInterval(() => void loadQueue(), 2000);
+    const timer = window.setInterval(() => void loadQueue(), 1000);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('touchstart', unlockAudio);
