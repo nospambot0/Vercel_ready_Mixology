@@ -16,10 +16,20 @@ function json(res:any,status:number,body:unknown) {
   res.statusCode=status; res.setHeader('Content-Type','application/json; charset=utf-8'); res.setHeader('Cache-Control','no-store'); res.end(JSON.stringify(body));
 }
 
-async function ensureTable(sql:any) {
-  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL, played_at TIMESTAMPTZ)`;
-  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
-  await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+let controlSchemaReady: Promise<void> | null = null;
+
+function ensureTable(sql: any): Promise<void> {
+  if (!controlSchemaReady) {
+    controlSchemaReady = (async () => {
+      await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL, played_at TIMESTAMPTZ)`;
+      await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
+      await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+    })().catch((error) => {
+      controlSchemaReady = null;
+      throw error;
+    });
+  }
+  return controlSchemaReady;
 }
 
 async function state(sql:any) {
