@@ -79,13 +79,23 @@ async function fetchTrackTitle(url: string, source: Source): Promise<string> {
   }
 }
 
-async function ensureTable(sql: any) {
-  await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT 'Guest', requester_url TEXT, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
-  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_name TEXT NOT NULL DEFAULT 'Guest'`;
-  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_url TEXT`;
-  await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
-  await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
-  await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+let queueSchemaReady: Promise<void> | null = null;
+
+function ensureTable(sql: any): Promise<void> {
+  if (!queueSchemaReady) {
+    queueSchemaReady = (async () => {
+      await sql`CREATE TABLE IF NOT EXISTS dj_queue (id TEXT PRIMARY KEY, source TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT 'Guest', requester_url TEXT, status TEXT NOT NULL DEFAULT 'queued', created_at TIMESTAMPTZ NOT NULL)`;
+      await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_name TEXT NOT NULL DEFAULT 'Guest'`;
+      await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS requester_url TEXT`;
+      await sql`ALTER TABLE dj_queue ADD COLUMN IF NOT EXISTS played_at TIMESTAMPTZ`;
+      await sql`CREATE INDEX IF NOT EXISTS dj_queue_status_created_idx ON dj_queue (status, created_at)`;
+      await sql`CREATE INDEX IF NOT EXISTS dj_queue_url_played_idx ON dj_queue (url, played_at)`;
+    })().catch((error) => {
+      queueSchemaReady = null;
+      throw error;
+    });
+  }
+  return queueSchemaReady;
 }
 
 
