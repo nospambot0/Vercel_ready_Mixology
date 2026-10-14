@@ -510,61 +510,131 @@ function GuestNowPlayingBoxes() {
   );
 }
 
-function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
-  const [showDjOverlay, setShowDjOverlay] = useState(true);
-  const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
-  const shelfFlavours = catalog.flavours.slice(0, 8);
-  const shelfPremixes = catalog.premixes.slice(0, 4);
+function HomeDjQueuePreview() {
+  const [items, setItems] = useState<DJItem[]>([]);
+  const [queueState, setQueueState] = useState<'loading' | 'online' | 'offline'>('loading');
+
+  useEffect(() => {
+    let active = true;
+    const loadQueue = async () => {
+      try {
+        const response = await fetch('/api/dj/queue', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load the DJ queue.');
+        const data = await response.json();
+        if (!active) return;
+        setItems([...(data.current ? [data.current] : []), ...(data.queue ?? [])]);
+        setQueueState('online');
+      } catch {
+        if (active) setQueueState('offline');
+      }
+    };
+
+    void loadQueue();
+    const timer = window.setInterval(() => void loadQueue(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const current = items.find((item) => item.status === 'playing');
+  const upcoming = items.filter((item) => item.status === 'queued');
+  const queueLabel = queueState === 'online' ? 'LIVE QUEUE' : queueState === 'offline' ? 'QUEUE OFFLINE' : 'CONNECTING';
+  const queueDot = queueState === 'online' ? 'bg-emerald-400' : queueState === 'offline' ? 'bg-accent' : 'bg-white/40';
+
   return (
-    <main className="hv-shell pb-28">
-      <section className="relative overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-primary-foreground shadow-2xl shadow-primary/20 md:px-14 md:py-20">
-        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-secondary/20 bg-secondary/10 blur-sm" />
-        <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
-        <div className="relative max-w-2xl">
-          <SectionEyebrow>MIXOLOGY PRO / TABLESIDE GUIDE 01</SectionEyebrow>
-          <p className="mb-5 max-w-md text-sm leading-6 text-primary-foreground/65">A quiet way to find a flavour you will actually enjoy.</p>
-          <h1 className="hv-display text-[3.4rem] leading-[.98] tracking-[-.055em] md:text-[5.6rem]">Find Your<br /><span className="text-secondary">Perfect Hookah.</span></h1>
-          <p className="mt-7 max-w-md text-base leading-7 text-primary-foreground/75 md:text-lg">Tell us what you like. We’ll create the mix.</p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <button className="hv-press flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-secondary px-6 font-bold text-secondary-foreground shadow-lg shadow-secondary/20" onClick={onFind} data-testid="button-find-my-hookah">FIND MY HOOKAH <ArrowRight size={18} /></button>
-            <button className="hv-press flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/20 px-6 text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/10" onClick={onSurprise} data-testid="button-surprise-me"><Sparkles size={17} /> SURPRISE ME</button>
-          </div>
+    <aside className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#10110f]/90 p-5 text-white shadow-2xl shadow-black/30 backdrop-blur-xl md:p-6" aria-label="Hillview Cafe DJ queue" data-testid="home-dj-queue-preview">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-secondary/15 blur-3xl" />
+      <div className="relative flex items-center justify-between gap-3">
+        <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white/55">HILLVIEW CAFE & RESTRO</p>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[9px] font-bold tracking-[0.14em] text-white/75" aria-live="polite">
+          <span className={`h-1.5 w-1.5 rounded-full ${queueDot}`} />{queueLabel}
+        </span>
+      </div>
+      <div className="relative mt-6 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#181a17] text-secondary shadow-[0_0_34px_hsl(var(--secondary)/.16)]">
+          <span className="absolute inset-2 rounded-full border border-white/10" />
+          <Disc3 size={34} strokeWidth={1.35} className={current ? 'animate-[spin_8s_linear_infinite]' : ''} />
+          <span className="absolute h-2 w-2 rounded-full bg-white/80" />
         </div>
-      </section>
-      <GuestNowPlayingBoxes />
-      <section className="py-14 md:py-20">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><SectionEyebrow>START WITH A MOOD</SectionEyebrow><h2 className="hv-display text-4xl md:text-5xl">What sounds good?</h2></div><p className="max-w-xs text-sm leading-6 text-muted-foreground">Tap a starting point, or let the expert take the first pour.</p></div>
-        <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{popular.map((taste) => <button key={taste} className="hv-press hv-surface group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-left hover:-translate-y-1 hover:border-secondary" onClick={onFind}><span className="hv-mono text-[10px] text-accent">MOOD</span><span className="hv-display text-2xl">{taste}</span></button>)}</div>
-      </section>
-      <section className="grid gap-5 pb-10 md:grid-cols-2"><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>FLAVOUR SHELF</SectionEyebrow><h2 className="hv-display text-3xl">Available flavours</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfFlavours.map((flavour) => <div key={flavour.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-bold">{flavour.name}</p><p className="text-[10px] text-muted-foreground">{flavour.brand}</p></div></div>)}</div></div><div className="hv-surface rounded-[2rem] p-6"><SectionEyebrow>PREMIX LIBRARY</SectionEyebrow><h2 className="hv-display text-3xl">Famous mixes</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfPremixes.map((premix) => <div key={premix.id} className="flex items-center gap-3 rounded-2xl border border-border/70 p-3"><PremixVisual premix={premix} size="sm" /><p className="truncate text-sm font-bold">{premix.name}</p></div>)}</div></div></section>
-      {showDjOverlay && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 px-5 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="home-dj-overlay-title">
-          <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-secondary/30 bg-primary p-7 text-primary-foreground shadow-2xl shadow-black/40 md:p-9">
-            <button type="button" onClick={() => setShowDjOverlay(false)} className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl bg-black/25 text-primary-foreground/70 backdrop-blur-sm hover:bg-black/40 hover:text-primary-foreground" aria-label="Close music overlay" data-testid="button-close-dj-overlay">
-              <X size={19} />
-            </button>
-            <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-black/20 shadow-xl">
-              <img src="/hillview-weekday-offer.jpg?v=20261007" alt="Hillview weekday offer" className="mx-auto block max-h-[42vh] w-auto max-w-[280px] object-contain" loading="eager" decoding="async" />
-            </div>
-            <div className="pr-2">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
-                <Music2 size={25} />
-              </div>
-              <SectionEyebrow>HILLVIEW CAFE & RESTRO / DJ</SectionEyebrow>
-              <h2 id="home-dj-overlay-title" className="hv-display text-4xl leading-tight md:text-5xl">Play your song in Hillview Cafe</h2>
-              <p className="mt-4 text-sm leading-6 text-primary-foreground/70">Choose a song and send it to the cafe DJ queue. You can add it to the queue or ask to play it now.</p>
-              <Link href="/dj-request" onClick={() => setShowDjOverlay(false)} className="mt-7 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-5 text-sm font-bold text-secondary-foreground shadow-lg hover:brightness-105" data-testid="link-home-dj-request">
-                <Play size={17} fill="currentColor" /> PLAY YOUR SONG
-                <ArrowRight size={17} />
-              </Link>
-            </div>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[9px] font-bold tracking-[0.18em] text-secondary">NOW PLAYING</p>
+          <h2 className="mt-2 line-clamp-2 text-base font-bold leading-snug md:text-lg" aria-live="polite">
+            {current?.title ?? (queueState === 'loading' ? 'Checking the DJ booth…' : 'The next song could be yours.')}
+          </h2>
+          <p className="mt-1 truncate text-[11px] text-white/50">
+            {current ? `Requested by ${current.requesterName || 'a guest'}` : queueState === 'offline' ? 'Live queue is temporarily unavailable.' : 'Send a track to Hillview Cafe.'}
+          </p>
         </div>
-      )}
-    </main>
+      </div>
+      <div className="relative mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-mono text-[9px] font-bold tracking-[0.18em] text-white/50">UP NEXT</p>
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 font-mono text-[10px] text-white/65">{upcoming.length}</span>
+        </div>
+        {queueState === 'loading' ? <p className="rounded-xl bg-white/[0.035] px-3 py-3 text-xs text-white/45">Loading the queue…</p> : upcoming.length === 0 ?
+          <p className="rounded-xl bg-white/[0.035] px-3 py-3 text-xs text-white/45">{queueState === 'offline' ? 'Check back in a moment.' : 'Be the first to request a track.'}</p> :
+          <div className="space-y-2">{upcoming.slice(0, 2).map((item, index) => <div key={item.id} className="flex min-w-0 items-center gap-3 rounded-xl bg-white/[0.035] px-3 py-2.5"><span className="font-mono text-[10px] text-secondary/80">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white/85">{item.title}</p><p className="mt-1 truncate text-[10px] text-white/40">{item.requesterName || 'Guest'} · YouTube</p></div><Music2 size={15} className="shrink-0 text-white/35" /></div>)}</div>}
+      </div>
+      <Link href="/dj-request" className="relative mt-5 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/10 px-4 text-xs font-bold tracking-wide text-secondary transition-colors hover:bg-secondary/15" data-testid="link-home-dj-queue">
+        VIEW FULL DJ QUEUE <ArrowRight size={15} />
+      </Link>
+    </aside>
   );
 }
 
+function HomePage({ onFind, onSurprise, catalog }: { onFind: () => void; onSurprise: () => void; catalog: Catalog }) {
+  const popular = ['Fresh', 'Fruity', 'Cooling', 'Exotic'];
+  const shelfFlavours = catalog.flavours.slice(0, 8);
+  const shelfPremixes = catalog.premixes.slice(0, 4);
+
+  return (
+    <main className="hv-shell pb-28">
+      <section className="relative isolate grid overflow-hidden rounded-[2.25rem] border border-white/10 bg-[#171714] px-5 py-7 text-white shadow-2xl shadow-black/30 md:grid-cols-[1.08fr_.92fr] md:items-center md:gap-8 md:px-10 md:py-10 lg:px-14 lg:py-12" data-testid="home-dj-feature">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_15%_5%,hsl(var(--secondary)/.16),transparent_44%),radial-gradient(ellipse_at_90%_100%,hsl(var(--accent)/.12),transparent_38%)]" />
+        <div className="pointer-events-none absolute -right-24 -top-28 -z-10 h-80 w-80 rounded-full border border-secondary/10" />
+        <div className="relative z-10 py-2 md:py-5">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-secondary/25 bg-secondary/[0.08] px-3 py-2 text-secondary">
+            <Disc3 size={15} />
+            <span className="font-mono text-[9px] font-bold tracking-[0.17em]">HILLVIEW CAFE & RESTRO / DJ</span>
+          </div>
+          <SectionEyebrow>YOUR SONG. THEIR SOUNDTRACK.</SectionEyebrow>
+          <h1 className="hv-display max-w-2xl text-[3.35rem] leading-[.96] tracking-[-.055em] sm:text-6xl md:text-[4.5rem] lg:text-[5rem]">
+            Put your song<br /><span className="text-secondary">in the room.</span>
+          </h1>
+          <p className="mt-5 max-w-lg text-sm leading-7 text-white/65 md:text-base">
+            Pick a YouTube track for Hillview Cafe. Add it to the shared DJ queue or ask to play it now.
+          </p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Link href="/dj-request" className="flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-secondary px-5 text-sm font-black tracking-wide text-secondary-foreground shadow-lg shadow-secondary/20 transition-transform hover:-translate-y-0.5" data-testid="link-home-dj-request">
+              <Play size={16} fill="currentColor" /> REQUEST A SONG <ArrowRight size={17} />
+            </Link>
+            <button type="button" className="flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-5 text-xs font-bold tracking-wide text-white/80 hover:bg-white/[0.07]" onClick={onFind} data-testid="button-find-my-hookah">
+              <Sparkles size={16} /> EXPLORE HOOKAH MIXES
+            </button>
+          </div>
+          <p className="mt-5 flex items-center gap-2 text-[10px] font-medium text-white/40"><Youtube size={14} /> YouTube requests · shared queue · live updates</p>
+        </div>
+        <div className="relative z-10 mt-3 md:mt-0">
+          <HomeDjQueuePreview />
+        </div>
+      </section>
+
+      <section className="py-12 md:py-16" aria-labelledby="home-mix-heading">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div><SectionEyebrow>BETWEEN TRACKS</SectionEyebrow><h2 id="home-mix-heading" className="hv-display text-4xl md:text-5xl">Find your next mix.</h2><p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">Tell us the flavours you like and build a hookah mix that fits your mood.</p></div>
+          <button type="button" className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-xl border border-border px-4 text-xs font-bold text-muted-foreground hover:border-secondary/50 hover:text-foreground" onClick={onSurprise} data-testid="button-surprise-me"><Sparkles size={15} /> SURPRISE ME</button>
+        </div>
+        <div className="mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">{popular.map((taste) => <button key={taste} type="button" className="hv-press hv-surface group flex min-h-24 flex-col justify-between rounded-2xl p-4 text-left hover:-translate-y-1 hover:border-secondary" onClick={onFind}><span className="hv-mono text-[10px] text-accent">MOOD</span><span className="hv-display text-2xl">{taste}</span></button>)}</div>
+      </section>
+
+      <section className="grid gap-5 pb-10 md:grid-cols-2" aria-label="Hookah flavours and premixes">
+        <div className="hv-surface rounded-[2rem] p-5 md:p-6"><SectionEyebrow>FLAVOUR SHELF</SectionEyebrow><h2 className="hv-display text-3xl">Available flavours</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfFlavours.map((flavour) => <div key={flavour.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 p-3"><FlavourVisual flavour={flavour} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-bold">{flavour.name}</p><p className="truncate text-[10px] text-muted-foreground">{flavour.brand}</p></div></div>)}</div></div>
+        <div className="hv-surface rounded-[2rem] p-5 md:p-6"><SectionEyebrow>PREMIX LIBRARY</SectionEyebrow><h2 className="hv-display text-3xl">Famous mixes</h2><div className="mt-5 grid grid-cols-2 gap-3">{shelfPremixes.map((premix) => <div key={premix.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 p-3"><PremixVisual premix={premix} size="sm" /><p className="truncate text-sm font-bold">{premix.name}</p></div>)}</div></div>
+      </section>
+    </main>
+  );
+}
 function StepHeader({ step, total, onBack }: { step: number; total: number; onBack?: () => void }) {
   return (
     <div className="mb-8 flex items-center justify-between gap-4">
