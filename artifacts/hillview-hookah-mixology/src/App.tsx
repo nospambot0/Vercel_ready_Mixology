@@ -1597,69 +1597,91 @@ function DJRequestPage() {
 
   return (
     <main className="hv-shell hv-page-in pb-28">
-      <div className="mx-auto max-w-3xl">
-        <div className="pt-4 md:pt-10">
-          <SectionEyebrow>REQUEST A SONG</SectionEyebrow>
-          <h1 className="hv-display text-5xl leading-tight md:text-7xl">DJ Queue</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">Paste a YouTube song link. The DJ phone will play accepted requests from the shared queue.</p>
-        </div>
-        <GuestNowPlayingBoxes />
-        <section className="mt-7 overflow-hidden rounded-[2rem] border border-black bg-black p-5 text-white shadow-2xl md:p-6" aria-live="polite" data-testid="banner-currently-playing">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-black shadow-lg">
-              <Disc3 size={23} className={current ? 'animate-[spin_3s_linear_infinite]' : ''} />
+      <div className="mx-auto max-w-6xl">
+        <section className="relative isolate mb-6 grid overflow-hidden rounded-[2.25rem] border border-white/10 bg-[#171714] px-5 py-7 text-white shadow-2xl shadow-black/30 md:grid-cols-[1fr_auto] md:items-center md:gap-8 md:px-10 md:py-9" data-testid="dj-request-hero">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_12%_0%,hsl(var(--secondary)/.17),transparent_48%),radial-gradient(ellipse_at_100%_100%,hsl(var(--accent)/.12),transparent_42%)]" />
+          <div className="relative z-10">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-secondary/25 bg-secondary/[0.08] px-3 py-2 text-secondary">
+              <Disc3 size={15} />
+              <span className="font-mono text-[9px] font-bold tracking-[0.17em]">HILLVIEW CAFE & RESTRO / LIVE DJ</span>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white">HILLVIEW CAFE & RESTRO</p>
-              <h2 className="mt-1 truncate text-base font-black md:text-lg">{current?.title || 'Nothing playing right now'}</h2>
-              <p className="mt-1 text-[11px] font-bold text-white/65">{current ? 'PLAYING LIVE IN THE CAFE' : 'THE DJ WILL APPEAR HERE WHEN THE NEXT SONG STARTS.'}</p>
+            <SectionEyebrow>FIND THE TRACK. SET THE MOOD.</SectionEyebrow>
+            <h1 className="hv-display text-[3.1rem] leading-[.97] tracking-[-.055em] sm:text-6xl md:text-[4.4rem]">Give the night<br /><span className="text-secondary">a soundtrack.</span></h1>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-white/65 md:text-base">Search YouTube and send a track to the shared Hillview Cafe DJ queue. Add it for later, or ask the DJ to play it now.</p>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold tracking-wide text-white/70" aria-live="polite">
+              <span className={`h-1.5 w-1.5 rounded-full ${current ? 'animate-pulse bg-emerald-400' : loading ? 'animate-pulse bg-secondary' : 'bg-white/35'}`} />
+              {current ? 'LIVE IN THE CAFE' : loading ? 'SYNCING WITH THE DJ BOOTH' : 'THE NEXT TRACK COULD BE YOURS'}
             </div>
-            {current && <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[9px] font-black tracking-wider text-black">LIVE</span>}
+          </div>
+          <div className="relative z-10 mt-6 hidden h-40 w-40 items-center justify-center md:mt-0 md:flex" aria-hidden="true">
+            <div className="absolute inset-0 rounded-full border border-secondary/20 bg-black/20 shadow-[0_0_60px_hsl(var(--secondary)/.12)]" />
+            <div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-white/10 bg-[#10110f] text-secondary shadow-inner">
+              <span className="absolute inset-3 rounded-full border border-white/10" />
+              <Disc3 size={70} strokeWidth={1} className={current ? 'animate-[spin_8s_linear_infinite]' : ''} />
+              <span className="absolute h-3 w-3 rounded-full bg-white/80" />
+            </div>
+            <span className="absolute bottom-1 right-0 rounded-full border border-secondary/25 bg-[#171714] px-3 py-1.5 font-mono text-[9px] font-bold tracking-[0.14em] text-secondary">DJ QUEUE</span>
           </div>
         </section>
-        <form onSubmit={addSong} className="hv-surface mt-5 rounded-[2rem] p-5 md:p-7">
-          <div className="grid gap-3 sm:grid-cols-2">
+
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,.92fr)]">
+          <form onSubmit={addSong} className="hv-surface rounded-[2rem] p-5 md:p-7" data-testid="form-dj-request">
+            <div className="mb-6 border-b border-border/70 pb-5">
+              <SectionEyebrow>MAKE A REQUEST</SectionEyebrow>
+              <h2 className="hv-display text-3xl md:text-4xl">Choose a track</h2>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">Find it on YouTube, then add it to the queue or request it now.</p>
+            </div>
             <label className="block text-xs font-bold" htmlFor="dj-request-name">Your name <span className="font-normal text-muted-foreground">(optional)</span>
               <input id="dj-request-name" type="text" value={requesterName} onChange={(event) => setRequesterName(event.target.value)} placeholder="Your name" maxLength={80} className="mt-2 min-h-12 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoComplete="name" data-testid="input-dj-request-name" />
             </label>
- 
-          </div>
-          <label className="mt-4 block text-xs font-bold">Find a track on YouTube</label>
-          <YouTubeSearchPicker onSelect={(result) => setUrl(result.url)} disabled={adding} />
-          <label className="mt-4 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link <span className="font-normal text-muted-foreground">(or paste a link)</span></label>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="min-h-13 flex-1 rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-              <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'}</button>
-              <button type="button" disabled={adding} onClick={() => void submitSong(true)} className="min-h-13 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-bold text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-play-now"><Play size={16} className="mr-1 inline" /> Play Now</button>
+            <label className="mt-5 block text-xs font-bold">Find a track on YouTube</label>
+            <YouTubeSearchPicker onSelect={(result) => setUrl(result.url)} disabled={adding} />
+            <label className="mt-5 block text-xs font-bold" htmlFor="dj-request-url">YouTube song link <span className="font-normal text-muted-foreground">(or paste a link)</span></label>
+            <input id="dj-request-url" type="url" required value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste YouTube link here…" className="mt-2 min-h-13 w-full rounded-2xl border border-border bg-background/70 px-4 text-sm outline-none focus:border-secondary" autoCapitalize="none" autoCorrect="off" data-testid="input-dj-request-url" />
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button type="submit" disabled={adding} className="min-h-13 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-lg disabled:opacity-50" data-testid="button-dj-add">{adding ? 'Adding…' : 'Add to Queue'} <ArrowRight size={16} className="ml-1 inline" /></button>
+              <button type="button" disabled={adding} onClick={() => void submitSong(true)} className="min-h-13 rounded-2xl border border-secondary/40 bg-secondary/10 px-5 text-sm font-bold text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-play-now"><Play size={16} fill="currentColor" className="mr-1 inline" /> Play Now</button>
             </div>
+            {message && <p className="mt-4 rounded-xl border border-secondary/20 bg-secondary/10 px-3 py-3 text-xs font-semibold" role="status">{message}</p>}
+            {playNowNotice && (
+              <div className="fixed inset-x-4 bottom-24 z-[120] mx-auto max-w-md rounded-2xl border border-secondary/40 bg-primary px-5 py-4 text-center text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30" role="status" aria-live="polite">
+                <p>Please be considerate of other’s music</p>
+                <p className="mt-1 text-xs font-medium text-primary-foreground/70">Do not abuse this feature</p>
+              </div>
+            )}
+            <p className="mt-4 text-[10px] leading-5 text-muted-foreground">Only YouTube video links are accepted. Age-restricted songs may be accepted; obviously disturbing or graphic videos are filtered.</p>
+          </form>
+
+          <div className="space-y-5">
+            <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#10110f] p-5 text-white shadow-xl shadow-black/20 md:p-6" aria-live="polite" data-testid="banner-currently-playing">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[9px] font-bold tracking-[0.18em] text-secondary">NOW PLAYING</p>
+                  <h2 className="hv-display mt-2 text-2xl leading-tight md:text-3xl">{current?.title || (loading ? 'Checking the booth…' : 'Nothing playing yet')}</h2>
+                  <p className="mt-2 text-[11px] text-white/50">{current ? 'Playing live at Hillview Cafe' : 'Be first to send a track to the DJ.'}</p>
+                </div>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-secondary">
+                  <Disc3 size={23} className={current ? 'animate-[spin_3s_linear_infinite]' : ''} />
+                </div>
+              </div>
+              {current && <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs text-white/50"><span className="inline-flex items-center gap-2"><DJSourceIcon source={current.source} size={15} /><DJSourceLabel source={current.source} /></span><span className="truncate">Requested by {current.requesterName || 'Guest'}</span><span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-[9px] font-bold tracking-wide text-emerald-300">LIVE</span></div>}
+            </section>
+
+            <section className="hv-surface rounded-[2rem] p-5 md:p-6" aria-labelledby="dj-queue-heading">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div><SectionEyebrow>UP NEXT</SectionEyebrow><h2 id="dj-queue-heading" className="hv-display text-3xl">The queue</h2></div>
+                <span className="rounded-full bg-secondary/15 px-3 py-1 font-mono text-[10px] font-bold text-secondary" aria-label={`${upcoming.length} songs in the queue`}>{upcoming.length}</span>
+              </div>
+              {loading ? <div className="rounded-2xl border border-border/70 bg-background/40 p-5 text-sm text-muted-foreground">Loading the live queue…</div> : upcoming.length === 0 ? <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 p-5 text-sm leading-6 text-muted-foreground">No requests waiting. Add the first track and set the mood.</div> :
+                <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-background/35 p-3"><span className="w-7 shrink-0 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={17} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 truncate text-[10px] text-muted-foreground">YouTube · {item.requesterName || 'Guest'}</p></div><Music2 size={15} className="shrink-0 text-muted-foreground/60" /></div>)}</div>}
+            </section>
+            <p className="px-2 text-center text-[10px] leading-5 text-muted-foreground">The shared DJ queue refreshes automatically while you browse.</p>
           </div>
-          {message && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold" role="status">{message}</p>}
-          {playNowNotice && (
-            <div className="fixed inset-x-4 bottom-24 z-[120] mx-auto max-w-md rounded-2xl border border-secondary/40 bg-primary px-5 py-4 text-center text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30" role="status" aria-live="polite">
-              <p>Please be considerate of other’s music</p>
-              <p className="mt-1 text-xs font-medium text-primary-foreground/70">Do not abuse this feature</p>
-            </div>
-          )}
-          <p className="mt-3 text-[10px] leading-5 text-muted-foreground">Only YouTube video links are accepted. Songs marked age-restricted by YouTube may be accepted; obviously disturbing or graphic videos are filtered.</p>
-        </form>
-        <section className="mt-6 hv-surface rounded-[2rem] p-5 md:p-7">
-          <div className="flex items-center justify-between gap-3">
-            <div><SectionEyebrow>CURRENTLY PLAYING</SectionEyebrow><h2 className="hv-display text-3xl">{current?.title || 'Nothing playing yet'}</h2></div>
-            {current && <span className="rounded-full bg-secondary/15 px-3 py-1 text-[10px] font-bold text-secondary">LIVE</span>}
-          </div>
-          {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><DJSourceIcon source={current.source} size={15} /><DJSourceLabel source={current.source} /></div>}
-        </section>
-        <section className="mt-6">
-          <div className="mb-4 flex items-end justify-between gap-3"><div><SectionEyebrow>UP NEXT</SectionEyebrow><h2 className="hv-display text-3xl">Queue</h2></div><span className="rounded-full bg-muted px-3 py-1 font-mono text-[10px] text-muted-foreground">{upcoming.length}</span></div>
-          {loading ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Loading queue…</div> : upcoming.length === 0 ? <div className="hv-surface rounded-2xl p-6 text-sm text-muted-foreground">Be the first to add a song.</div> :
-            <div className="space-y-2">{upcoming.map((item, index) => <div key={item.id} className="hv-surface flex items-center gap-3 rounded-2xl p-3"><span className="w-6 text-center font-mono text-[10px] text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-secondary"><DJSourceIcon source={item.source} size={18} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">YouTube · Requested by {item.requesterName || 'Guest'}</p></div></div>)}</div>}
-        </section>
+        </div>
       </div>
     </main>
   );
 }
-
 function DJPage() {
   const requestUrl = 'https://mixology.monster/dj-request';
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(requestUrl)}&size=360&margin=2`;
