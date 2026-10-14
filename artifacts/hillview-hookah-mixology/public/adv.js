@@ -44,22 +44,6 @@
       voices.find(v => /^en-US/i.test(v.lang)) || voices[0];
   }
 
-  function playBrowserFallback() {
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(ANNOUNCEMENT);
-      const voice = chooseVoice();
-      if (voice) utterance.voice = voice;
-      utterance.lang = voice?.lang || 'en-IN';
-      utterance.rate = 0.92;
-      utterance.pitch = 0.92;
-      utterance.volume = 1;
-      utterance.onend = finish;
-      utterance.onerror = finish;
-      window.speechSynthesis.speak(utterance);
-    } catch { finish(); }
-  }
-
   async function playAnnouncement() {
     if (speaking) return;
     speaking = true;
@@ -74,18 +58,30 @@
         credentials: 'same-origin',
         body: JSON.stringify({ text: ANNOUNCEMENT })
       });
-      if (!response.ok) throw new Error('ElevenLabs voice is not configured.');
+      if (!response.ok) {
+        let detail = 'Request failed with HTTP ' + response.status;
+        try {
+          const payload = await response.json();
+          if (payload && typeof payload.error === 'string') detail = payload.error;
+        } catch {}
+        throw new Error(detail);
+      }
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.toLowerCase().includes('audio/')) {
+        const detail = await response.text().catch(() => '');
+        throw new Error(detail.slice(0, 180) || 'The server did not return audio.');
+      }
       const audioBlob = await response.blob();
-      if (!audioBlob.size) throw new Error('Empty voice response.');
+      if (!audioBlob.size) throw new Error('ElevenLabs returned an empty audio file.');
       currentObjectUrl = URL.createObjectURL(audioBlob);
       currentAudio = new Audio(currentObjectUrl);
       currentAudio.preload = 'auto';
       currentAudio.onended = finish;
-      currentAudio.onerror = playBrowserFallback;
+      currentAudio.onerror = () => reportVoiceError('The generated audio could not be played in this browser.');
       if (button) button.textContent = 'ADV • PLAYING';
       await currentAudio.play();
-    } catch {
-      playBrowserFallback();
+    } catch (error) {
+      reportVoiceError(error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
