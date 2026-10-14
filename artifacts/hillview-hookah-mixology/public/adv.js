@@ -37,11 +37,28 @@
     } catch {}
   }
 
-  function chooseVoice() {
-    const voices = window.speechSynthesis?.getVoices?.() || [];
-    return voices.find(v => /^en-IN/i.test(v.lang)) ||
-      voices.find(v => /^en-GB/i.test(v.lang)) ||
-      voices.find(v => /^en-US/i.test(v.lang)) || voices[0];
+  // Build marker for verifying which ADV script is actually loaded in production.
+  window.__MIXOLOGY_ADV_BUILD__ = 'elevenlabs-20261014-3';
+
+  function reportVoiceError(message) {
+    console.error('[Mixology ADV] ElevenLabs failed:', message);
+    const button = document.getElementById(BUTTON_ID);
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'ADV • ERROR';
+      button.title = 'ElevenLabs failed: ' + message;
+    }
+    window.alert('ElevenLabs DJ voice failed: ' + message + '\\n\\nNo browser voice fallback is enabled. Check the Production API key and voice ID in Vercel.');
+    speaking = false;
+    if (currentAudio) {
+      currentAudio.onended = null;
+      currentAudio.onerror = null;
+      currentAudio = null;
+    }
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = null;
+    }
   }
 
   async function playAnnouncement() {
@@ -109,7 +126,7 @@
     const button = document.createElement('button');
     button.id = BUTTON_ID;
     button.type = 'button';
-    button.title = 'Play a premium AI DJ announcement over the current music';
+    button.title = 'Play ElevenLabs AI DJ announcement over the current music';
     button.setAttribute('aria-label', 'Play Mixology PRO AI DJ announcement');
     button.className = 'flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-bold text-secondary-foreground hover:bg-secondary/20 disabled:cursor-not-allowed disabled:opacity-50';
     button.textContent = 'ADV';
@@ -122,5 +139,4 @@
   window.addEventListener('popstate', addButton);
   window.setTimeout(addButton, 500);
   window.setTimeout(addButton, 1500);
-  if (window.speechSynthesis) window.speechSynthesis.getVoices();
 })();
