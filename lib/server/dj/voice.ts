@@ -48,7 +48,12 @@ export default async function handler(req: any, res: any): Promise<void> {
         model_id: modelId,
         voice_settings: { stability: 0.42, similarity_boost: 0.78, style: 0.25, use_speaker_boost: true },
       }),
-    });
+    }) as unknown as {
+      ok: boolean;
+      status: number;
+      text(): Promise<string>;
+      arrayBuffer(): Promise<ArrayBuffer>;
+    };
 
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 300);
