@@ -1787,10 +1787,6 @@ function DJPage() {
   const lastHkvTriggerIdRef = useRef<string | null>(null);
   const lastHkvTriggerAtRef = useRef(0);
   const hkvPollInFlightRef = useRef(false);
-  const customAnnouncementStartedAtRef = useRef(Date.now());
-  const lastCustomAnnouncementIdRef = useRef<string | null>(null);
-  const lastCustomAnnouncementAtRef = useRef(0);
-  const customAnnouncementPollInFlightRef = useRef(false);
 
   const checkHkvTrigger = async () => {
     if (hkvPollInFlightRef.current) return;
