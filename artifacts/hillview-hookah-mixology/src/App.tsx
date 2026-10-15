@@ -530,7 +530,7 @@ function HomeDjQueuePreview() {
     };
 
     void loadQueue();
-    const timer = window.setInterval(() => void loadQueue(), 5000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadQueue(); }, 20000);
     return () => {
       active = false;
       window.clearInterval(timer);
@@ -1553,7 +1553,7 @@ function DJRequestPage() {
 
   useEffect(() => {
     void loadQueue();
-    const timer = window.setInterval(() => void loadQueue(), 5000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadQueue(); }, 20000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -1696,300 +1696,10 @@ function DJPage() {
   const [staffAdding, setStaffAdding] = useState(false);
   const [autoAdding, setAutoAdding] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [advPlaying, setAdvPlaying] = useState(false);
-  const [introPlaying, setIntroPlaying] = useState(false);
   const [hkvPlaying, setHkvPlaying] = useState(false);
-  const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
-  const [customAnnouncementText, setCustomAnnouncementText] = useState('');
-
-  const playAdvAnnouncement = () => {
-    if (advPlaying) return;
-    setAdvPlaying(true);
-
-    // YouTube volume is controlled by the iframe player, so duck it immediately
-    // and again just before speech starts. Keep the DJ's exact volume for restore.
-    const duckYouTube = () => {
-      try {
-        if (!playerRef.current?.setVolume) return;
-        if (advPreviousVolumeRef.current === null && playerRef.current.getVolume) {
-          const currentVolume = Number(playerRef.current.getVolume());
-          if (Number.isFinite(currentVolume)) advPreviousVolumeRef.current = currentVolume;
-        }
-        const restoreVolume = advPreviousVolumeRef.current;
-        if (restoreVolume !== null) {
-          playerRef.current.setVolume(Math.max(0, Math.round(restoreVolume * 0.35)));
-          advVolumeDuckedRef.current = true;
-        }
-      } catch {}
-    };
-
-    duckYouTube();
-
-    const finish = () => {
-      if (advVolumeDuckedRef.current) {
-        try {
-          const previousVolume = advPreviousVolumeRef.current;
-          if (playerRef.current?.setVolume && previousVolume !== null) {
-            playerRef.current.setVolume(previousVolume);
-          }
-        } catch {}
-        advPreviousVolumeRef.current = null;
-        advVolumeDuckedRef.current = false;
-      }
-      setAdvPlaying(false);
-    };
-    try {
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (Ctx) {
-        const context = audioContextRef.current ?? new Ctx();
-        audioContextRef.current = context;
-        const playStinger = () => {
-          const now = context.currentTime;
-          const master = context.createGain();
-          master.gain.setValueAtTime(0.0001, now);
-          master.gain.exponentialRampToValueAtTime(0.14, now + 0.03);
-          master.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
-          master.connect(context.destination);
-          [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-            const oscillator = context.createOscillator();
-            const gain = context.createGain();
-            const start = now + index * 0.09;
-            oscillator.type = index > 1 ? 'sine' : 'triangle';
-            oscillator.frequency.setValueAtTime(frequency, start);
-            gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.5, start + 0.025);
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
-            oscillator.connect(gain); gain.connect(master);
-            oscillator.start(start); oscillator.stop(start + 0.38);
-          });
-        };
-        if (context.state === 'suspended') void context.resume().then(playStinger).catch(() => {}); else playStinger();
-      }
-    } catch {}
-
-    window.setTimeout(() => {
-      try {
-        let spoken = false;
-        const speak = () => {
-          if (spoken) return;
-          spoken = true;
-          window.speechSynthesis.removeEventListener('voiceschanged', speak);
-          const voices = window.speechSynthesis.getVoices();
-          const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
-          const voice =
-            voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
-            voices.find((item) => femaleNames.test(item.name)) ||
-            voices.find((item) => /^en-IN/i.test(item.lang)) ||
-            voices.find((item) => /^en-GB/i.test(item.lang)) ||
-            voices.find((item) => /^en-US/i.test(item.lang)) ||
-            voices[0];
-
-          const utterance = new SpeechSynthesisUtterance('Mixology Pro, presented by Hillview Cafe. Play your music now using our app.');
-          if (voice) utterance.voice = voice;
-          utterance.lang = voice?.lang || 'en-IN';
-          utterance.rate = 0.9;
-          utterance.pitch = 1.08;
-          utterance.volume = 1;
-          utterance.onend = finish;
-          utterance.onerror = finish;
-          window.speechSynthesis.speak(utterance);
-        };
-
-        // Re-apply the duck immediately before the voice starts so the
-        // YouTube iframe cannot overwrite it between the button press and speech.
-        duckYouTube();
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length) {
-          speak();
-        } else {
-          window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
-          window.setTimeout(() => {
-            if (!spoken) speak();
-          }, 700);
-        }
-      } catch { finish(); }
-    }, 400);
-  };
-
-  const playIntroAnnouncement = () => {
-    if (introPlaying || advPlaying || hkvPlaying || customAnnouncementPlaying) return;
-    setIntroPlaying(true);
-
-    const introText = 'This is your DJ Chagala, and we are now streaming music live in Hillview Cafe. If you want to request or play songs, head over to www.mixology.monster. For now, sit back, relax, have some coffee and enjoy.';
-    let previousVolume: number | null = null;
-    let ducked = false;
-    let audio: HTMLAudioElement | null = null;
-    let fadeTimer: number | null = null;
-    let duckRetryTimer: number | null = null;
-    let fadeStarted = false;
-    let fallbackTimer: number | null = null;
-    let finished = false;
-
-    const duckYouTube = () => {
-      try {
-        const player = playerRef.current;
-        if (!player?.setVolume) return false;
-
-        // YouTube's API can expose the player object before the iframe is
-        // actually ready. Do not treat a blind setVolume() call as success.
-        if (previousVolume === null) {
-          const currentVolume = Number(player.getVolume?.());
-          previousVolume = Number.isFinite(currentVolume) ? Math.max(0, Math.min(100, currentVolume)) : 100;
-        }
-
-        const targetVolume = Math.max(0, Math.round(previousVolume * 0.35));
-        player.setVolume(targetVolume);
-
-        // Verify the API accepted the new volume. If it did not, the caller
-        // will retry until the iframe is ready.
-        const appliedVolume = Number(player.getVolume?.());
-        if (Number.isFinite(appliedVolume) && Math.abs(appliedVolume - targetVolume) <= 2) {
-          ducked = true;
-          return true;
-        }
-
-        // Some YouTube iframe versions do not return getVolume reliably.
-        // A successful setVolume call is still useful, but give it one more
-        // tick before declaring the duck complete.
-        window.setTimeout(() => {
-          try {
-            const check = Number(player.getVolume?.());
-            if (Number.isFinite(check) && Math.abs(check - targetVolume) <= 2) ducked = true;
-          } catch {}
-        }, 150);
-        return false;
-      } catch {}
-      return false;
-    };
-
-    const ensureMusicDucked = () => {
-      if (ducked) return;
-      if (duckYouTube()) return;
-      if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
-      const started = performance.now();
-      duckRetryTimer = window.setInterval(() => {
-        if (ducked || performance.now() - started > 3000) {
-          if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
-          duckRetryTimer = null;
-          return;
-        }
-        duckYouTube();
-      }, 100);
-    };
-
-    const restoreMusic = () => {
-      try {
-        if (fadeTimer !== null) window.clearInterval(fadeTimer);
-        if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
-        if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-        if (audio) {
-          audio.onended = null;
-          audio.onerror = null;
-          audio.ontimeupdate = null;
-          audio.pause();
-          audio.src = '';
-        }
-        if (ducked && playerRef.current?.setVolume && previousVolume !== null) {
-          playerRef.current.setVolume(previousVolume);
-        }
-      } catch {}
-      setIntroPlaying(false);
-    };
-
-    const fadeMusicBack = () => {
-      if (!ducked || previousVolume === null || !playerRef.current?.setVolume || fadeStarted) return;
-      fadeStarted = true;
-      try {
-        const start = performance.now();
-        const from = Math.max(0, Math.round(previousVolume * 0.35));
-        const duration = 4000;
-        if (fadeTimer !== null) window.clearInterval(fadeTimer);
-        fadeTimer = window.setInterval(() => {
-          const progress = Math.min(1, (performance.now() - start) / duration);
-          const eased = progress * progress * (3 - 2 * progress);
-          playerRef.current?.setVolume?.(Math.round(from + (previousVolume! - from) * eased));
-          if (progress >= 1) {
-            if (fadeTimer !== null) window.clearInterval(fadeTimer);
-            fadeTimer = null;
-          }
-        }, 50);
-      } catch {}
-    };
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      restoreMusic();
-    };
-
-    // Duck immediately when possible, then keep retrying until the YouTube iframe is ready.
-    // This covers the case where INTRO is pressed while the iframe is still initializing.
-    ensureMusicDucked();
-
-    try {
-      audio = new Audio('https://raw.githubusercontent.com/nospambot0/Vercel_ready_Mixology/main/artifacts/hillview-hookah-mixology/public/ElevenLabs_2026-10-06T17_43_27_Benne%20-%20Young%20South%20Indian%20Companion_pvc_sp100_s35_sb56_v4.mp3');
-      audio.preload = 'auto';
-      audio.crossOrigin = 'anonymous';
-      audio.volume = 1;
-      audio.ontimeupdate = () => {
-        if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
-        const remaining = audio.duration - audio.currentTime;
-        if (remaining <= 4.0) fadeMusicBack();
-      };
-      audio.onended = finish;
-      audio.onerror = () => {
-        // If the hosted MP3 is not present yet, fall back to the exact script.
-        try {
-          if (audio) { audio.pause(); audio.src = ''; }
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(introText);
-          const voices = window.speechSynthesis.getVoices();
-          const voice = voices.find((item) => /^en-IN/i.test(item.lang)) ||
-            voices.find((item) => /^en-GB/i.test(item.lang)) ||
-            voices.find((item) => /^en-US/i.test(item.lang)) ||
-            voices[0];
-          if (voice) utterance.voice = voice;
-          utterance.lang = voice?.lang || 'en-IN';
-          utterance.rate = 0.88;
-          utterance.pitch = 0.98;
-          utterance.volume = 1;
-          const estimateMs = Math.max(7000, introText.length * 65);
-          const fadeAt = Math.max(2500, estimateMs - 4000);
-          window.setTimeout(() => {
-            if (!finished) fadeMusicBack();
-          }, fadeAt);
-          utterance.onend = finish;
-          utterance.onerror = finish;
-          window.speechSynthesis.speak(utterance);
-          fallbackTimer = window.setTimeout(finish, estimateMs + 5000);
-        } catch {
-          finish();
-        }
-      };
-      audio.load();
-      void audio.play().catch(() => {
-        // Some mobile browsers reject the first play attempt while the MP3 is still loading.
-        // Retry once after the media becomes playable; otherwise use the speech fallback.
-        if (!audio) return;
-        const retry = () => {
-          audio?.removeEventListener('canplay', retry);
-          void audio?.play().catch(() => audio?.onerror?.(new Event('error')));
-        };
-        audio.addEventListener('canplay', retry, { once: true });
-        window.setTimeout(() => {
-          audio?.removeEventListener('canplay', retry);
-          if (!finished && audio?.paused) audio?.onerror?.(new Event('error'));
-        }, 3000);
-      });
-    } catch {
-      finish();
-    }
-  };
 
   const playHkvAnnouncement = () => {
-    if (hkvPlaying || advPlaying) return;
+    if (hkvPlaying) return;
     setHkvPlaying(true);
 
     let previousVolume: number | null = null;
@@ -2073,78 +1783,6 @@ function DJPage() {
       speak();
     }
   };
-  const playCustomAnnouncement = (text: string) => {
-    const message = text.trim();
-    if (!message || advPlaying || hkvPlaying || customAnnouncementPlaying) return;
-    setCustomAnnouncementPlaying(true);
-    let previousVolume: number | null = null;
-    let ducked = false;
-    let spoken = false;
-    let fallbackTimer: number | null = null;
-    const duckYouTube = () => {
-      try {
-        if (!playerRef.current?.setVolume) return;
-        if (previousVolume === null && playerRef.current.getVolume) {
-          const currentVolume = Number(playerRef.current.getVolume());
-          if (Number.isFinite(currentVolume)) previousVolume = currentVolume;
-        }
-        if (previousVolume !== null) {
-          playerRef.current.setVolume(Math.max(0, Math.round(previousVolume * 0.4)));
-          ducked = true;
-        }
-      } catch {}
-    };
-    const finish = () => {
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      if (ducked) {
-        try { if (playerRef.current?.setVolume && previousVolume !== null) playerRef.current.setVolume(previousVolume); } catch {}
-      }
-      setCustomAnnouncementPlaying(false);
-    };
-    const speak = () => {
-      if (spoken) return;
-      spoken = true;
-      try {
-        window.speechSynthesis.cancel();
-        if (window.speechSynthesis.resume) window.speechSynthesis.resume();
-        duckYouTube();
-        const voices = window.speechSynthesis.getVoices();
-        const femaleNames = /female|samantha|karen|victoria|ava|allison|aria|jenny|zira|hazel|susan|siri|moira|fiona|sonia|google uk english female|microsoft aria|microsoft jenny|microsoft sonia/i;
-        const voice =
-          voices.find((item) => femaleNames.test(item.name) && /^en-IN/i.test(item.lang)) ||
-          voices.find((item) => femaleNames.test(item.name) && /^en-GB/i.test(item.lang)) ||
-          voices.find((item) => femaleNames.test(item.name) && /^en-US/i.test(item.lang)) ||
-          voices.find((item) => femaleNames.test(item.name)) ||
-          voices.find((item) => /^en-IN/i.test(item.lang)) ||
-          voices.find((item) => /^en-GB/i.test(item.lang)) ||
-          voices.find((item) => /^en-US/i.test(item.lang)) ||
-          voices[0];
-        const utterance = new SpeechSynthesisUtterance(message);
-        if (voice) utterance.voice = voice;
-        utterance.lang = voice?.lang || 'en-IN';
-        // Dramatic, sharp announcement delivery: slower cadence, lower pitch, full volume.
-        // Keep the voice clear and authoritative over the music bed.
-        utterance.rate = 0.80;
-        utterance.pitch = 0.92;
-        utterance.volume = 1;
-        utterance.onend = finish;
-        utterance.onerror = finish;
-        window.speechSynthesis.speak(utterance);
-        fallbackTimer = window.setTimeout(() => finish(), Math.max(15000, Math.min(60000, message.length * 95)));
-      } catch { finish(); }
-    };
-    duckYouTube();
-    try {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length) speak();
-      else { window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true }); window.setTimeout(speak, 1000); }
-    } catch { speak(); }
-  };
-
-  const advStartedAtRef = useRef(Date.now());
-  const lastAdvTriggerIdRef = useRef<string | null>(null);
-  const lastAdvTriggerAtRef = useRef(0);
-  const advPollInFlightRef = useRef(false);
   const hkvStartedAtRef = useRef(Date.now());
   const lastHkvTriggerIdRef = useRef<string | null>(null);
   const lastHkvTriggerAtRef = useRef(0);
@@ -2153,26 +1791,6 @@ function DJPage() {
   const lastCustomAnnouncementIdRef = useRef<string | null>(null);
   const lastCustomAnnouncementAtRef = useRef(0);
   const customAnnouncementPollInFlightRef = useRef(false);
-
-  const checkCustomAnnouncement = async () => {
-    if (customAnnouncementPollInFlightRef.current) return;
-    customAnnouncementPollInFlightRef.current = true;
-    try {
-      const response = await fetch(`/api/dj/announcement?ts=${Date.now()}`, { cache: 'no-store', credentials: 'include' });
-      if (!response.ok) return;
-      const data = await response.json();
-      const trigger = data.trigger as { id?: string; createdAt?: string; text?: string } | null;
-      if (!trigger?.id || !trigger.text || trigger.id === lastCustomAnnouncementIdRef.current) return;
-      const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
-      lastCustomAnnouncementIdRef.current = trigger.id;
-      if (!createdAt || createdAt <= lastCustomAnnouncementAtRef.current) return;
-      lastCustomAnnouncementAtRef.current = createdAt;
-      if (createdAt < customAnnouncementStartedAtRef.current - 1500) return;
-      try { if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume(); } catch {}
-      playCustomAnnouncement(trigger.text);
-    } catch {
-    } finally { customAnnouncementPollInFlightRef.current = false; }
-  };
 
   const checkHkvTrigger = async () => {
     if (hkvPollInFlightRef.current) return;
@@ -2204,57 +1822,6 @@ function DJPage() {
     }
   };
 
-  const checkAdvTrigger = async () => {
-    if (advPollInFlightRef.current) return;
-    advPollInFlightRef.current = true;
-    try {
-      const response = await fetch(`/api/dj/adv?ts=${Date.now()}`, {
-        cache: 'no-store',
-        credentials: 'include',
-      });
-      if (!response.ok) return;
-      const data = await response.json();
-      const trigger = data.trigger as { id?: string; createdAt?: string } | null;
-      if (!trigger?.id || trigger.id === lastAdvTriggerIdRef.current) return;
-
-      const createdAt = trigger.createdAt ? Date.parse(trigger.createdAt) : 0;
-      lastAdvTriggerIdRef.current = trigger.id;
-
-      // Ignore an old announcement when a staff device first opens the page.
-      if (!createdAt || createdAt <= lastAdvTriggerAtRef.current) return;
-      lastAdvTriggerAtRef.current = createdAt;
-      if (createdAt < advStartedAtRef.current - 1500) return;
-
-      // Re-activate the local audio context before remote playback where possible.
-      try {
-        if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume();
-      } catch {}
-      playAdvAnnouncement();
-    } catch {
-      // Keep polling; transient network/database errors must not stop ADV delivery.
-    } finally {
-      advPollInFlightRef.current = false;
-    }
-  };
-
-  const triggerAdvForAllStaffTabs = async () => {
-    // Play immediately on the device that pressed ADV, then persist the trigger
-    // so every other open staff device can detect the same announcement.
-    playAdvAnnouncement();
-    try {
-      const response = await fetch('/api/dj/adv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({}),
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error('ADV broadcast failed');
-    } catch {
-      setNotice('ADV played here, but the staff-device broadcast could not be sent.');
-    }
-  };
-
   const triggerHkvForAllStaffTabs = async () => {
     playHkvAnnouncement();
     try {
@@ -2271,43 +1838,26 @@ function DJPage() {
     } catch { setNotice('HKV played here, but the staff-device broadcast could not be sent.'); }
   };
 
-  const triggerCustomAnnouncement = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const message = customAnnouncementText.trim();
-    if (!message) { setNotice('Enter an announcement first.'); return; }
-    if (message.length > 500) { setNotice('Announcement is limited to 500 characters.'); return; }
-    if (advPlaying || hkvPlaying || customAnnouncementPlaying) return;
-    setNotice('');
-    try {
-      const response = await fetch('/api/dj/announcement', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ text: message }), cache: 'no-store' });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Announcement broadcast failed.');
-      if (data.id) lastCustomAnnouncementIdRef.current = String(data.id);
-      setCustomAnnouncementText('');
-      setNotice('Announcement sent to all open staff DJ devices.');
-      playCustomAnnouncement(message);
-    } catch (error) { setNotice(error instanceof Error ? error.message : 'Announcement broadcast failed.'); }
-  };
-
   useEffect(() => {
-    // Poll HKV independently so remote staff devices receive the announcement.
-    void checkHkvTrigger();
-    const hkvTimer = window.setInterval(() => void checkHkvTrigger(), 750);
-    void checkCustomAnnouncement();
-    const customAnnouncementTimer = window.setInterval(() => void checkCustomAnnouncement(), 750);
-
-    // Poll independently from the queue so ADV delivery is not delayed by queue
-    // requests or another slow network call.
-    void checkAdvTrigger();
-    const timer = window.setInterval(() => void checkAdvTrigger(), 750);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') void checkAdvTrigger();
+    // Poll only HKV announcements, and stop requests while this tab is hidden.
+    let timer: number | undefined;
+    const startPolling = () => {
+      if (timer !== undefined || document.visibilityState !== 'visible') return;
+      void checkHkvTrigger();
+      timer = window.setInterval(() => void checkHkvTrigger(), 3000);
     };
+    const stopPolling = () => {
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') startPolling();
+      else stopPolling();
+    };
+    startPolling();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      window.clearInterval(timer);
-      window.clearInterval(hkvTimer);
-      window.clearInterval(customAnnouncementTimer);
+      stopPolling();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
@@ -2323,8 +1873,6 @@ function DJPage() {
   const activeVideoIdRef = useRef<string | null>(null);
   const queueMutationAtRef = useRef(0);
   const advanceInFlightRef = useRef(false);
-  const advPreviousVolumeRef = useRef<number | null>(null);
-  const advVolumeDuckedRef = useRef(false);
 
   const loadQueue = async () => {
     if (queuePollInFlightRef.current) return;
@@ -2334,7 +1882,6 @@ function DJPage() {
       const response = await fetch(`/api/dj/queue?ts=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load DJ queue.');
-      void checkAdvTrigger();
       const nextCurrent = data.current ?? null;
       const nextQueue = Array.isArray(data.queue) ? data.queue : [];
       // Do not let a queue poll that started before a newer staff action
@@ -2387,7 +1934,7 @@ function DJPage() {
     window.addEventListener('touchstart', unlockAudio, { passive: true });
     window.addEventListener('click', unlockAudio);
     void loadQueue();
-    const timer = window.setInterval(() => void loadQueue(), 1000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void loadQueue(); }, 3000);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener('touchstart', unlockAudio);
@@ -2632,17 +2179,8 @@ function DJPage() {
             <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
             {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
-            <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
-              <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
-              <h3 className="hv-display text-2xl">Speak to every staff device</h3>
-              <p className="mt-2 text-[10px] leading-5 text-muted-foreground">Enter your words and send them instantly to all open DJ pages. Music dips to 40% while the female announcement plays, then returns to the exact previous volume.</p>
-              <textarea value={customAnnouncementText} onChange={(event) => setCustomAnnouncementText(event.target.value)} maxLength={500} rows={3} placeholder="Type your announcement here…" className="mt-4 w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-xs outline-none focus:border-secondary" disabled={advPlaying || hkvPlaying || customAnnouncementPlaying} />
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="font-mono text-[10px] text-muted-foreground">{customAnnouncementText.length}/500</span>
-                <button type="submit" disabled={!customAnnouncementText.trim() || advPlaying || hkvPlaying || customAnnouncementPlaying} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-secondary px-5 text-xs font-black text-secondary-foreground disabled:opacity-50" data-testid="button-dj-custom-announcement"><Megaphone size={15} /> {customAnnouncementPlaying ? 'PLAYING…' : 'ANNOUNCE NOW'}</button>
-              </div>
-            </form>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={hkvPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            
             {current && <p className="mt-3 text-[10px] leading-5 text-muted-foreground">If the browser blocks autoplay, press Play once. YouTube may also block videos whose owners disable embedding.</p>}
           </section>
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
