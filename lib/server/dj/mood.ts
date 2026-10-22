@@ -2,8 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
 import { isValidSession } from '../../../api/manage/_auth';
 
-type Req = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined> };
+type Req = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined>; query?: Record<string, string | string[] | undefined> };
 type Res = { statusCode: number; setHeader(name: string, value: string | string[]): void; end(body?: string): void };
+
+const MOODS = ['Chill', 'Romantic', 'Lounge', 'Party', 'Phonk', 'Afro House', 'Bollywood', 'Ambient'] as const;
+const MOOD_FOLDERS: Record<string, string> = {
+  Chill: 'https://drive.google.com/drive/folders/1gO2ujdgIX7v4HU56TKFIMFMnylqrpUzZ',
+};
+let schemaReady: Promise<void> | null = null;
+let folderCache: { expiresAt: number; tracks: Array<{ id: string; title: string; url: string; mood: string; source: string }> } | null = null;
 
 function json(res: Res, status: number, body: unknown) {
   res.statusCode = status;
@@ -32,8 +39,59 @@ function bodyOf(req: Req): Record<string, unknown> {
   if (typeof req.body === 'string') { try { return JSON.parse(req.body) as Record<string, unknown>; } catch { return {}; } }
   return {};
 }
-const MOODS = ['Chill', 'Romantic', 'Lounge', 'Party', 'Phonk', 'Afro House', 'Bollywood', 'Ambient'] as const;
-let schemaReady: Promise<void> | null = null;
+function cleanText(value: unknown, max: number) { return typeof value === 'string' ? value.trim().slice(0, max) : ''; }
+function validDriveUrl(raw: string) {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:') return false;
+    return ['drive.google.com', 'docs.google.com', 'drive.usercontent.google.com'].includes(url.hostname.toLowerCase());
+  } catch { return false; }
+}
+function decodeHtml(value: string) {
+  return value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x([\da-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16))).replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+function stripHtml(value: string) { return decodeHtml(value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')).trim(); }
+
+async function resolveChillFolder(): Promise<Array<{ id: string; title: string; url: string; mood: string; source: string }>> {
+  if (folderCache && folderCache.expiresAt > Date.now()) return folderCache.tracks;
+  const folderUrl = MOOD_FOLDERS.Chill;
+  const folderId = '1gO2ujdgIX7v4HU56TKFIMFMnylqrpUzZ';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+  try {
+    const response = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#list`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MixologyMoodPlayer/1.0)', 'Accept': 'text/html' },
+    });
+    if (!response.ok) throw new Error('Google Drive folder is not publicly readable.');
+    const html = await response.text();
+    const found = new Map<string, string>();
+    // Google Drive's embedded folder view exposes file IDs in its item links/data attributes.
+    const patterns = [
+      /<a\b[^>]*href=["'][^"']*\/file\/d\/([A-Za-z0-9_-]{10,})[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi,
+      /data-id=["']([A-Za-z0-9_-]{10,})["'][^>]*>[\s\S]{0,500}?(?:aria-label|title)=["']([^"']+)["']/gi,
+      /data-id=["']([A-Za-z0-9_-]{10,})["'][\s\S]{0,600}?class=["'][^"']*(?:flip-entry-title|file-name)[^"']*["'][^>]*>([\s\S]*?)<\//gi,
+    ];
+    for (const pattern of patterns) {
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(html))) {
+        const id = match[1];
+        const label = stripHtml(match[2] || '');
+        if (!found.has(id) && /\.(mp3|m4a|aac|ogg|oga|wav|flac|mp4|webm)(?:\s|$)/i.test(label)) found.set(id, label);
+      }
+    }
+    const tracks = [...found.entries()].map(([id, title]) => ({
+      id: `drive-${id}`, title: title.replace(/\.(mp3|m4a|aac|ogg|oga|wav|flac|mp4|webm)$/i, '').slice(0, 120) || 'Chill track',
+      url: `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`, mood: 'Chill', source: 'Google Drive folder',
+    }));
+    folderCache = { expiresAt: Date.now() + 45_000, tracks };
+    return tracks;
+  } catch {
+    // Do not cache a failure for long; an owner may fix the folder's sharing permissions.
+    folderCache = { expiresAt: Date.now() + 8_000, tracks: [] };
+    return [];
+  } finally { clearTimeout(timeout); }
+}
 function ensureSchema(sql: any): Promise<void> {
   if (!schemaReady) schemaReady = (async () => {
     await sql`CREATE TABLE IF NOT EXISTS dj_mood_tracks (id TEXT PRIMARY KEY, title TEXT NOT NULL, url TEXT NOT NULL, mood TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
@@ -43,23 +101,19 @@ function ensureSchema(sql: any): Promise<void> {
   })().catch((error) => { schemaReady = null; throw error; });
   return schemaReady;
 }
-function cleanText(value: unknown, max: number) { return typeof value === 'string' ? value.trim().slice(0, max) : ''; }
-function validDriveUrl(raw: string) {
-  try {
-    const url = new URL(raw);
-    if (url.protocol !== 'https:') return false;
-    return ['drive.google.com', 'docs.google.com', 'drive.usercontent.google.com'].includes(url.hostname.toLowerCase());
-  } catch { return false; }
-}
 
 export default async function handler(req: Req, res: Res) {
   try {
     const sql = db();
     await ensureSchema(sql);
     if (req.method === 'GET') {
-      const tracks = await sql`SELECT id, title, url, mood, created_at AS "createdAt" FROM dj_mood_tracks ORDER BY created_at DESC`;
-      const settings = await sql`SELECT active_mood AS "activeMood" FROM dj_mood_settings WHERE id = 'venue' LIMIT 1`;
-      json(res, 200, { tracks, activeMood: settings[0]?.activeMood ?? 'Chill', moods: MOODS });
+      const [manualTracks, settings, folderTracks] = await Promise.all([
+        sql`SELECT id, title, url, mood, created_at AS "createdAt" FROM dj_mood_tracks ORDER BY created_at DESC`,
+        sql`SELECT active_mood AS "activeMood" FROM dj_mood_settings WHERE id = 'venue' LIMIT 1`,
+        resolveChillFolder(),
+      ]);
+      const tracks = [...folderTracks, ...manualTracks];
+      json(res, 200, { tracks, activeMood: settings[0]?.activeMood ?? 'Chill', moods: MOODS, folders: MOOD_FOLDERS, folderStatus: folderTracks.length ? 'ready' : 'unavailable' });
       return;
     }
     if (req.method !== 'POST') { json(res, 405, { error: 'Method not allowed.' }); return; }
@@ -81,6 +135,7 @@ export default async function handler(req: Req, res: Res) {
     if (action === 'delete') {
       const id = cleanText(body.id, 64);
       if (!id) { json(res, 400, { error: 'Track ID is required.' }); return; }
+      if (id.startsWith('drive-')) { json(res, 400, { error: 'Drive-folder tracks are managed in Google Drive; remove the file there instead.' }); return; }
       await sql`DELETE FROM dj_mood_tracks WHERE id = ${id}`;
       json(res, 200, { ok: true });
       return;
