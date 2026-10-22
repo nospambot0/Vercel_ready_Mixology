@@ -2716,13 +2716,14 @@ function DJPage() {
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
             <div className="flex items-center justify-between gap-3"><div className="min-w-0"><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{moodMode ? (moodTrackTitle || activeMood + ' playlist') : (current?.title || 'No song selected')}</h2>{!moodMode && current && <p className="mt-2 text-xs font-semibold text-muted-foreground">Requested by <span className="text-foreground">{current.requesterName || 'Guest'}</span></p>}</div><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
             <div className="mt-5 min-h-24 overflow-hidden rounded-3xl bg-black">
-              {moodMode ? (
+              {moodMode && (
                 <div className="flex min-h-24 flex-col justify-center p-4">
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-200"><Disc3 size={15} /> MOOD PLAYBACK · {activeMood}</div>
                   <p className="truncate text-sm font-semibold text-white">{moodTrackTitle || 'Loading mood track…'}</p>
                   <audio ref={moodAudioRef} className="mt-3 w-full accent-amber-300" controls onEnded={() => startMoodTrack(moodTrackIndex + 1)} onError={() => setNotice('Could not stream this Drive file. Make sure the file is audio and shared as “Anyone with the link”.')} />
                 </div>
-              ) : <div id="dj-youtube-player" className="aspect-video h-full w-full" />}
+              )}
+              <div id="dj-youtube-player" className={moodMode ? 'hidden' : 'aspect-video h-full w-full'} />
             </div>
             {!moodMode && !current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
             {moodMode && <div className="mt-4 flex items-center gap-2 text-xs text-amber-200"><Disc3 size={15} /> Shared venue mood playlist · {activeMood}</div>}
