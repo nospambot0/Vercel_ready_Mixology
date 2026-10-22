@@ -2680,13 +2680,23 @@ function DJPage() {
 type MoodTrack = { id: string; title: string; url: string; mood: string; createdAt?: string };
 const MOOD_OPTIONS = ['Chill', 'Romantic', 'Lounge', 'Party', 'Phonk', 'Afro House', 'Bollywood', 'Ambient'];
 
-function driveAudioUrl(raw: string) {
+function driveFileId(raw: string) {
   try {
     const url = new URL(raw);
-    const fileId = url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id');
-    if (url.hostname.includes('drive.google.com') && fileId) return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId);
-    return raw;
-  } catch { return raw; }
+    return /(^|\.)google\.com$/i.test(url.hostname)
+      ? (url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id'))
+      : null;
+  } catch { return null; }
+}
+
+function driveAudioUrl(raw: string) {
+  const fileId = driveFileId(raw);
+  return fileId ? 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId) : raw;
+}
+
+function driveAudioFallbackUrl(raw: string) {
+  const fileId = driveFileId(raw);
+  return fileId ? 'https://drive.usercontent.google.com/download?id=' + encodeURIComponent(fileId) + '&export=download&confirm=t' : raw;
 }
 
 function MoodPage() {
@@ -2702,6 +2712,7 @@ function MoodPage() {
   const [currentTrack, setCurrentTrack] = useState<MoodTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioFallbackTried = useRef(false);
   const playlist = useMemo(() => tracks.filter((track) => track.mood === activeMood), [tracks, activeMood]);
 
   async function loadMood() {
@@ -2748,6 +2759,7 @@ function MoodPage() {
     setNotice('');
     const audio = audioRef.current;
     if (!audio) return;
+    audioFallbackTried.current = false;
     audio.src = driveAudioUrl(track.url);
     audio.load();
     try {
@@ -2844,7 +2856,7 @@ function MoodPage() {
             <div className="flex min-w-0 items-center gap-4"><div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-black"><Disc3 size={27} /></div><div className="min-w-0"><p className="font-mono text-[9px] font-bold tracking-[0.2em] text-amber-300/70">NOW PLAYING · {activeMood.toUpperCase()}</p><h2 className="hv-display mt-1 truncate text-2xl sm:text-3xl">{currentTrack?.title || 'Choose a mood to begin'}</h2><p className="mt-1 text-[10px] text-white/40">Standalone Mood player · independent from DJ</p></div></div>
             <div className="flex gap-2"><button type="button" disabled={!playlist.length} onClick={() => void playRandomTrack(activeMood, currentTrack?.id)} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-xs font-bold hover:border-amber-300/50 disabled:opacity-40"><SkipForward size={15} /> Next song</button><button type="button" disabled={!currentTrack} onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) void audio.play().then(() => setIsPlaying(true)).catch(() => setNotice('Tap Play again to start audio.')); else { audio.pause(); setIsPlaying(false); } }} className="flex min-h-11 items-center gap-2 rounded-xl bg-amber-300 px-4 text-xs font-black text-black disabled:opacity-40">{isPlaying ? 'Pause' : 'Play'}</button></div>
           </div>
-          <audio ref={audioRef} className="mt-5 w-full accent-amber-300" controls onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => void playRandomTrack(activeMood, currentTrack?.id)} onError={() => { if (currentTrack) { setIsPlaying(false); setNotice('Could not stream this Drive file. Ensure it is an audio file shared as “Anyone with the link”.'); } }} />
+          <audio ref={audioRef} className="mt-5 w-full accent-amber-300" controls onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => void playRandomTrack(activeMood, currentTrack?.id)} onError={() => { const audio = audioRef.current; if (currentTrack && audio && !audioFallbackTried.current) { audioFallbackTried.current = true; audio.src = driveAudioFallbackUrl(currentTrack.url); audio.load(); void audio.play().then(() => setIsPlaying(true)).catch(() => { setIsPlaying(false); setNotice('Could not stream this Drive file. Check that it is audio and shared as “Anyone with the link”.'); }); } else if (currentTrack) { setIsPlaying(false); setNotice('Could not stream this Drive file. Check that it is audio and shared as “Anyone with the link”.'); } }} />
         </section>
         {notice && <div role="status" className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-xs leading-5 text-amber-100/80">{notice}</div>}
         <p className="mt-5 text-center text-[10px] leading-5 text-white/30">Mood playback is separate from the existing DJ page. Google Drive folders and files must allow access to anyone with the link. If autoplay is blocked, tap Play once.</p>
