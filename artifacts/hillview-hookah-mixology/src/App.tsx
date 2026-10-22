@@ -2677,6 +2677,153 @@ function DJPage() {
   );
 }
 
+
+type MoodTrack = { id: string; title: string; url: string; mood: string; createdAt?: string };
+const MOOD_OPTIONS = ['Chill', 'Romantic', 'Lounge', 'Party', 'Phonk', 'Afro House', 'Bollywood', 'Ambient'];
+
+function driveAudioUrl(raw: string) {
+  try {
+    const url = new URL(raw);
+    const fileId = url.pathname.match(/\/file\/d\/([^/]+)/)?.[1] || url.searchParams.get('id');
+    if (url.hostname.includes('drive.google.com') && fileId) return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId);
+    return raw;
+  } catch { return raw; }
+}
+
+function MoodPage() {
+  const [tracks, setTracks] = useState<MoodTrack[]>([]);
+  const [activeMood, setActiveMood] = useState('Chill');
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [newMood, setNewMood] = useState('Chill');
+  const [currentTrack, setCurrentTrack] = useState<MoodTrack | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playlist = useMemo(() => tracks.filter((track) => track.mood === activeMood), [tracks, activeMood]);
+
+  async function loadMood() {
+    try {
+      const response = await fetch('/api/dj/mood', { cache: 'no-store', credentials: 'include' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load mood library.');
+      setTracks(Array.isArray(data.tracks) ? data.tracks : []);
+      setActiveMood(data.activeMood || 'Chill');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load mood library.');
+    } finally { setLoading(false); }
+  }
+  useEffect(() => { void loadMood(); }, []);
+
+  async function sendAction(payload: Record<string, string>) {
+    setBusy(true);
+    setNotice('');
+    try {
+      const response = await fetch('/api/dj/mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Mood action failed.');
+      await loadMood();
+      return data;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Mood action failed.');
+      return null;
+    } finally { setBusy(false); }
+  }
+
+  async function addTrack(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const result = await sendAction({ action: 'add', title, url, mood: newMood });
+    if (result) { setTitle(''); setUrl(''); setNotice('Track added to ' + newMood + '.'); }
+  }
+  async function chooseMood(mood: string) {
+    const result = await sendAction({ action: 'set-mood', mood });
+    if (result) {
+      setActiveMood(mood);
+      setCurrentTrack(null);
+      setNotice('Venue mood changed to ' + mood + '.');
+      if (audioRef.current) audioRef.current.pause();
+    }
+  }
+  async function removeTrack(id: string) {
+    if (currentTrack?.id === id) { audioRef.current?.pause(); setCurrentTrack(null); }
+    const result = await sendAction({ action: 'delete', id });
+    if (result) setNotice('Track removed from the library.');
+  }
+  function playTrack(track: MoodTrack) {
+    setCurrentTrack(track);
+    window.setTimeout(() => { void audioRef.current?.play().catch(() => setNotice('Playback was blocked or this Drive file is not directly playable. Check that the file is shared for viewing.')); }, 120);
+  }
+  function playNext() {
+    if (!playlist.length) return;
+    const index = currentTrack ? playlist.findIndex((track) => track.id === currentTrack.id) : -1;
+    playTrack(playlist[(index + 1) % playlist.length]);
+  }
+
+  return (
+    <main className="min-h-screen bg-[#090a0c] px-4 pb-28 pt-6 text-white sm:px-6 md:pt-10" data-testid="page-mood">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-bold tracking-[0.24em] text-amber-300"><span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_#fcd34d]" /> MIXOLOGY / MOOD CONTROL</div>
+            <h1 className="hv-display text-5xl leading-none sm:text-6xl">Set the <span className="text-amber-300">mood.</span></h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">Build mood-based playlists from your Google Drive library and choose the sound for the venue.</p>
+          </div>
+          <Link href="/manage" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-xs font-bold text-white/75 hover:border-amber-300/50 hover:text-amber-200"><ArrowLeft size={15} /> Dashboard</Link>
+        </div>
+
+        <section className="mb-8 rounded-[2rem] border border-amber-300/20 bg-gradient-to-br from-[#201a12] via-[#151311] to-[#101114] p-5 shadow-2xl shadow-black/30 sm:p-7">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-200/70">CURRENT VENUE MOOD</p><h2 className="hv-display mt-2 text-4xl sm:text-5xl">{activeMood}</h2><p className="mt-2 text-xs text-white/50">{playlist.length} {playlist.length === 1 ? 'track' : 'tracks'} in this playlist</p></div>
+            <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3"><Music2 size={22} className="text-amber-300" /><p className="mt-2 text-[10px] font-bold tracking-widest text-white/45">MOOD DJ</p></div>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {MOOD_OPTIONS.map((mood) => <button key={mood} type="button" disabled={busy} onClick={() => void chooseMood(mood)} className={\`min-h-12 rounded-xl border px-3 text-sm font-semibold transition \${activeMood === mood ? 'border-amber-300 bg-amber-300 text-black shadow-lg shadow-amber-300/10' : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-amber-300/40 hover:text-white'}\`}>{mood}{activeMood === mood ? <span className="ml-2">✓</span> : null}</button>)}
+          </div>
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <section className="rounded-[2rem] border border-white/10 bg-[#111216] p-5 sm:p-6">
+            <p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-300/80">ADD TO LIBRARY</p>
+            <h2 className="hv-display mt-2 text-3xl">Add a track</h2>
+            <p className="mt-2 text-xs leading-5 text-white/45">Paste a Google Drive link to an audio file. The file must be shared so the player can access it.</p>
+            <form onSubmit={(event) => void addTrack(event)} className="mt-5 space-y-4">
+              <label className="block text-xs font-semibold text-white/70">Song title<input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Midnight in Mumbai" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none focus:border-amber-300/60" /></label>
+              <label className="block text-xs font-semibold text-white/70">Google Drive link<input required type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://drive.google.com/file/d/…" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none focus:border-amber-300/60" /></label>
+              <label className="block text-xs font-semibold text-white/70">Assign mood<select value={newMood} onChange={(event) => setNewMood(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#17181c] px-4 text-sm text-white outline-none focus:border-amber-300/60">{MOOD_OPTIONS.map((mood) => <option key={mood} value={mood}>{mood}</option>)}</select></label>
+              <button type="submit" disabled={busy} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 text-sm font-bold text-black transition hover:bg-amber-200 disabled:opacity-50"><Plus size={17} /> {busy ? 'Saving…' : 'Add to mood library'}</button>
+            </form>
+          </section>
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#111216] p-5 sm:p-6">
+            <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-300/80">PLAYLIST</p><h2 className="hv-display mt-2 text-3xl">{activeMood} tracks</h2></div><span className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/50">{playlist.length} SONGS</span></div>
+            <div className="mt-5 space-y-2">
+              {loading ? <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-white/45">Loading mood library…</p> : playlist.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><Disc3 size={28} className="mx-auto text-amber-300/70" /><p className="mt-3 text-sm font-semibold">No tracks in {activeMood} yet</p><p className="mt-1 text-xs text-white/40">Add a Drive song and assign this mood.</p></div> : playlist.map((track, index) => <div key={track.id} className={\`flex items-center gap-3 rounded-2xl border p-3 \${currentTrack?.id === track.id ? 'border-amber-300/40 bg-amber-300/[0.07]' : 'border-white/[0.07] bg-white/[0.02]'}\`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] font-mono text-xs text-amber-300">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{track.title}</p><p className="mt-1 truncate text-[10px] text-white/40">Google Drive · {track.mood}</p></div><button type="button" onClick={() => playTrack(track)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-black" aria-label={\`Play \${track.title}\`}><Play size={16} fill="currentColor" /></button><button type="button" disabled={busy} onClick={() => void removeTrack(track.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/45 hover:border-red-400/40 hover:text-red-300" aria-label={\`Remove \${track.title}\`}><Trash2 size={15} /></button></div>)}
+            </div>
+          </section>
+        </div>
+
+        <section className="mt-6 rounded-[2rem] border border-white/10 bg-[#111216] p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-300"><Disc3 size={27} /></div>
+            <div className="min-w-0 flex-1"><p className="font-mono text-[9px] font-bold tracking-[0.2em] text-amber-300/70">NOW PLAYING · LOCAL PREVIEW</p><p className="mt-1 truncate text-sm font-semibold">{currentTrack?.title || 'Choose a track to preview'}</p><p className="mt-1 text-[10px] text-white/40">{currentTrack ? currentTrack.mood + ' playlist' : 'Playback starts when you press play on a song.'}</p></div>
+            <button type="button" onClick={playNext} disabled={!playlist.length} className="flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/30 px-4 text-xs font-bold text-amber-200 disabled:opacity-40"><SkipForward size={15} /> Next</button>
+          </div>
+          <audio ref={audioRef} className="mt-4 w-full accent-amber-300" controls src={currentTrack ? driveAudioUrl(currentTrack.url) : undefined} onEnded={playNext} onError={() => setNotice('Could not play this Drive file. Check its sharing permission or use a direct audio URL.')} />
+        </section>
+        {notice && <div role="status" className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-xs leading-5 text-amber-100/80">{notice}</div>}
+        <p className="mt-5 text-center text-[10px] leading-5 text-white/30">Mood and track settings are saved centrally. Audio preview plays on this device; Google Drive links must allow playback access.</p>
+      </div>
+    </main>
+  );
+}
+
+
 function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: () => void }) {
   return (
     <main className="hv-shell hv-page-in pb-28">
@@ -2702,7 +2849,7 @@ function ManageDashboard({ catalog, onLogout }: { catalog: Catalog; onLogout: ()
             <p className="mt-3 text-sm leading-6 text-muted-foreground">Create and maintain premix recipes, flavour percentages and customer-facing descriptions.</p>
             <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">{catalog.premixes.length} premixes</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div>
           </Link>
-          <Link href="/manage/dj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-dj"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Music2 size={26} /></div><h2 className="hv-display mt-6 text-3xl">DJ</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Control the shared song queue from the phone connected to the speaker. Customers can submit requests.</p><div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">Staff playback</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div></Link><Link href="/manage/access-emails" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-access-emails">
+          <Link href="/manage/dj" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-dj"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-secondary"><Music2 size={26} /></div><h2 className="hv-display mt-6 text-3xl">DJ</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Control the shared song queue from the phone connected to the speaker. Customers can submit requests.</p><div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs font-bold">Staff playback</span><ArrowRight size={17} className="text-secondary transition-transform group-hover:translate-x-1" /></div></Link><Link href="/manage/mood" className="group rounded-[2rem] border border-amber-300/20 bg-[#111216] p-6 text-white transition hover:-translate-y-0.5 hover:border-amber-300/50" data-testid="link-manage-mood"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300 text-black"><Disc3 size={26} /></div><h2 className="hv-display mt-6 text-3xl">Mood</h2><p className="mt-3 text-sm leading-6 text-white/55">Build Google Drive playlists and choose the mood that sets the atmosphere across your venue.</p><div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4"><span className="text-xs font-bold text-amber-200">Mood control</span><ArrowRight size={17} className="text-amber-300 transition-transform group-hover:translate-x-1" /></div></Link><Link href="/manage/access-emails" className="hv-surface group rounded-[2rem] p-6 transition hover:-translate-y-0.5 hover:border-secondary/50" data-testid="link-manage-access-emails">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Send size={26} /></div>
             <h2 className="hv-display mt-6 text-3xl">Access Emails</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">Manage the email addresses that receive staff login verification codes. Changes sync automatically.</p>
@@ -2839,6 +2986,7 @@ function ManageGate({ catalog, onChange }: { catalog: Catalog; onChange: (next: 
     if (location === '/manage') return <ManageDashboard catalog={catalog} onLogout={logout} />;
     if (location === '/manage/pos') return <PosPage />;
     if (location === '/manage/dj') return <DJPage />;
+    if (location === '/manage/mood') return <MoodPage />;
     if (location === '/manage/karmadj') return <iframe title="KARMADJ" src="/karmadj.html" className="fixed inset-0 h-screen w-screen border-0 bg-black" allow="autoplay" />;
     if (location === '/manage/access-emails') return <AccessEmailsPage />;
     return <ManagePage catalog={catalog} onChange={onChange} onLogout={logout} section={location === '/manage/premixes' ? 'premixes' : 'flavours'} />;
@@ -3085,7 +3233,7 @@ function RouterView({ choice, onSave, onEdit, onReset, launch, setLaunch, onFind
       <Route path="/manage"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route path="/manage/flavours"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
       <Route path="/manage/premixes"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route>
-      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/karmadj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/access-emails"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/dj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/dj-request"><DJRequestPage /></Route>
+      <Route path="/manage/pos"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/karmadj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/access-emails"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/dj"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/manage/mood"><ManageGate catalog={catalog} onChange={onCatalogChange} /></Route><Route path="/dj-request"><DJRequestPage /></Route>
       <Route><NotFoundPage /></Route>
     </Switch>
   );
