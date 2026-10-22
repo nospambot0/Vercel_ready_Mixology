@@ -516,35 +516,7 @@ function HomeDjQueuePreview() {
 
   useEffect(() => {
     let active = true;
-    const startMoodTrack = (index: number) => {
-    const tracks = moodTracksRef.current.filter((track) => track.mood === activeMood);
-    if (!tracks.length) { setNotice(`No playable tracks are available for ${activeMood} yet.`); return; }
-    const nextIndex = ((index % tracks.length) + tracks.length) % tracks.length;
-    const track = tracks[nextIndex];
-    const audio = moodAudioRef.current;
-    if (!audio) return;
-    setMoodTrackIndex(nextIndex);
-    setMoodTrackTitle(track.title);
-    audio.src = driveAudioUrl(track.url);
-    audio.load();
-    void audio.play().then(() => setNotice('')).catch(() => setNotice('Mood playlist is selected, but playback was blocked or this Drive file is not directly playable. Check that the folder and audio files are shared with anyone who has the link.'));
-  };
-
-  const loadMoodState = async () => {
-    if (moodPollInFlightRef.current) return;
-    moodPollInFlightRef.current = true;
-    try {
-      const response = await fetch(`/api/dj/mood?ts=${Date.now()}`, { cache: 'no-store' });
-      const data = await response.json();
-      if (!response.ok) return;
-      setMoodTracks(Array.isArray(data.tracks) ? data.tracks : []);
-      setActiveMood(typeof data.activeMood === 'string' ? data.activeMood : 'Chill');
-    } catch {
-      // Mood polling is independent of the queue and must not disrupt existing DJ playback.
-    } finally { moodPollInFlightRef.current = false; }
-  };
-
-  const loadQueue = async () => {
+    const loadQueue = async () => {
       try {
         const response = await fetch('/api/dj/queue', { cache: 'no-store' });
         if (!response.ok) throw new Error('Could not load the DJ queue.');
@@ -1746,6 +1718,80 @@ function DJPage() {
       moodPreviousVolumeRef.current = null;
     }
   };
+  const activeMoodTrackIdRef = useRef<string | null>(null);
+  const startMoodTrack = async (index: number) => {
+    const tracks = moodTracksRef.current.filter((track) => track.mood === activeMood);
+    if (!tracks.length) { setNotice(`No playable tracks are available for ${activeMood} yet.`); return; }
+    const nextIndex = ((index % tracks.length) + tracks.length) % tracks.length;
+    const track = tracks[nextIndex];
+    try {
+      const response = await fetch('/api/dj/mood', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'play-track', id: track.id }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not switch the venue track.');
+      activeMoodTrackIdRef.current = track.id;
+      setMoodTrackIndex(nextIndex);
+      setMoodTrackTitle(track.title);
+      setMoodMode(true);
+      moodModeRef.current = true;
+      try { playerRef.current?.pauseVideo?.(); } catch {}
+      const audio = moodAudioRef.current;
+      if (audio) {
+        audio.src = driveAudioUrl(track.url);
+        audio.load();
+        await audio.play();
+      }
+      setNotice('');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Mood track could not be started. Check Drive sharing permissions.');
+    }
+  };
+
+  const loadMoodState = async () => {
+    if (moodPollInFlightRef.current) return;
+    moodPollInFlightRef.current = true;
+    try {
+      const response = await fetch(`/api/dj/mood?ts=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) return;
+      const nextTracks = Array.isArray(data.tracks) ? data.tracks as MoodTrack[] : [];
+      const nextMood = typeof data.activeMood === 'string' ? data.activeMood : 'Chill';
+      const nextTrackId = typeof data.activeTrackId === 'string' ? data.activeTrackId : null;
+      setMoodTracks(nextTracks);
+      setActiveMood(nextMood);
+      moodTracksRef.current = nextTracks;
+      const available = nextTracks.filter((track) => track.mood === nextMood);
+      if (!available.length) {
+        activeMoodTrackIdRef.current = null;
+        setMoodMode(false);
+        moodModeRef.current = false;
+        return;
+      }
+      setMoodMode(true);
+      moodModeRef.current = true;
+      if (!nextTrackId) {
+        await fetch('/api/dj/mood', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action: 'set-mood', mood: nextMood }) });
+        return;
+      }
+      if (nextTrackId !== activeMoodTrackIdRef.current) {
+        const index = available.findIndex((track) => track.id === nextTrackId);
+        const track = index >= 0 ? available[index] : available[0];
+        activeMoodTrackIdRef.current = track.id;
+        setMoodTrackIndex(index >= 0 ? index : 0);
+        setMoodTrackTitle(typeof data.activeTrackTitle === 'string' ? data.activeTrackTitle : track.title);
+        try { playerRef.current?.pauseVideo?.(); } catch {}
+        const audio = moodAudioRef.current;
+        if (audio) {
+          audio.src = driveAudioUrl(track.url);
+          audio.load();
+          if (youtubeUnlockedRef.current || audioUnlockedRef.current) {
+            void audio.play().catch(() => setNotice('Mood is selected. Tap Play once if the browser blocks playback.'));
+          }
+        }
+      }
+    } catch {
+      // Shared mood polling must not interrupt the existing DJ queue.
+    } finally { moodPollInFlightRef.current = false; }
+  };
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -2520,22 +2566,15 @@ function DJPage() {
   };
 
   useEffect(() => {
-    const availableTracks = moodTracks.filter((track) => track.mood === activeMood);
-    if (!activeMood || !availableTracks.length) {
-      if (activeMood) {
-        setMoodMode(false);
-        moodModeRef.current = false;
-      }
-      return;
-    }
-    setMoodMode(true);
-    moodModeRef.current = true;
-    try { playerRef.current?.pauseVideo?.(); } catch {}
-    // Wait for the shared player audio element to mount after switching the viewport.
-    const startTimer = window.setTimeout(() => startMoodTrack(0), 120);
-    return () => window.clearTimeout(startTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMood, moodTracks.find((track) => track.mood === activeMood)?.id]);
+    moodTracksRef.current = moodTracks;
+  }, [moodTracks]);
+
+  useEffect(() => {
+    void loadMoodState();
+    const timer = window.setInterval(() => void loadMoodState(), 1200);
+    return () => window.clearInterval(timer);
+  }, []);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -2848,9 +2887,9 @@ function MoodPage() {
     const result = await sendAction({ action: 'delete', id });
     if (result) setNotice('Track removed from the library.');
   }
-  function playTrack(track: MoodTrack) {
-    void chooseMood(track.mood);
-    setNotice('Switched the venue to the ' + track.mood + ' playlist. Playback is handled by the shared DJ player.');
+  async function playTrack(track: MoodTrack) {
+    const result = await sendAction({ action: 'play-track', id: track.id });
+    if (result) setNotice('Now selected for the shared venue player: ' + track.title + '.');
   }
 
   return (

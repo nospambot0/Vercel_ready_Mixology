@@ -97,6 +97,9 @@ function ensureSchema(sql: any): Promise<void> {
     await sql`CREATE TABLE IF NOT EXISTS dj_mood_tracks (id TEXT PRIMARY KEY, title TEXT NOT NULL, url TEXT NOT NULL, mood TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
     await sql`CREATE INDEX IF NOT EXISTS dj_mood_tracks_mood_idx ON dj_mood_tracks (mood, created_at)`;
     await sql`CREATE TABLE IF NOT EXISTS dj_mood_settings (id TEXT PRIMARY KEY, active_mood TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
+    await sql`ALTER TABLE dj_mood_settings ADD COLUMN IF NOT EXISTS active_track_id TEXT`;
+    await sql`ALTER TABLE dj_mood_settings ADD COLUMN IF NOT EXISTS active_track_url TEXT`;
+    await sql`ALTER TABLE dj_mood_settings ADD COLUMN IF NOT EXISTS active_track_title TEXT`;
     await sql`INSERT INTO dj_mood_settings (id, active_mood) VALUES ('venue', 'Chill') ON CONFLICT (id) DO NOTHING`;
   })().catch((error) => { schemaReady = null; throw error; });
   return schemaReady;
@@ -109,11 +112,12 @@ export default async function handler(req: Req, res: Res) {
     if (req.method === 'GET') {
       const [manualTracks, settings, folderTracks] = await Promise.all([
         sql`SELECT id, title, url, mood, created_at AS "createdAt" FROM dj_mood_tracks ORDER BY created_at DESC`,
-        sql`SELECT active_mood AS "activeMood" FROM dj_mood_settings WHERE id = 'venue' LIMIT 1`,
+        sql`SELECT active_mood AS "activeMood", active_track_id AS "activeTrackId", active_track_url AS "activeTrackUrl", active_track_title AS "activeTrackTitle", updated_at AS "updatedAt" FROM dj_mood_settings WHERE id = 'venue' LIMIT 1`,
         resolveChillFolder(),
       ]);
       const tracks = [...folderTracks, ...manualTracks];
-      json(res, 200, { tracks, activeMood: settings[0]?.activeMood ?? 'Chill', moods: MOODS, folders: MOOD_FOLDERS, folderStatus: folderTracks.length ? 'ready' : 'unavailable' });
+      const setting = settings[0] ?? {};
+      json(res, 200, { tracks, activeMood: setting.activeMood ?? 'Chill', activeTrackId: setting.activeTrackId ?? null, activeTrackUrl: setting.activeTrackUrl ?? null, activeTrackTitle: setting.activeTrackTitle ?? null, updatedAt: setting.updatedAt ?? null, moods: MOODS, folders: MOOD_FOLDERS, folderStatus: folderTracks.length ? 'ready' : 'unavailable' });
       return;
     }
     if (req.method !== 'POST') { json(res, 405, { error: 'Method not allowed.' }); return; }
@@ -140,11 +144,21 @@ export default async function handler(req: Req, res: Res) {
       json(res, 200, { ok: true });
       return;
     }
-    if (action === 'set-mood') {
-      const mood = cleanText(body.mood, 32);
-      if (!(MOODS as readonly string[]).includes(mood)) { json(res, 400, { error: 'Choose a supported mood.' }); return; }
-      await sql`UPDATE dj_mood_settings SET active_mood = ${mood}, updated_at = NOW() WHERE id = 'venue'`;
-      json(res, 200, { ok: true, activeMood: mood });
+    if (action === 'set-mood' || action === 'play-track') {
+      const requestedMood = cleanText(body.mood, 32);
+      const trackId = cleanText(body.id, 64);
+      if (action === 'set-mood' && !(MOODS as readonly string[]).includes(requestedMood)) { json(res, 400, { error: 'Choose a supported mood.' }); return; }
+      const [manualTracks, folderTracks] = await Promise.all([
+        sql`SELECT id, title, url, mood FROM dj_mood_tracks ORDER BY created_at DESC`,
+        resolveChillFolder(),
+      ]);
+      const allTracks = [...folderTracks, ...manualTracks];
+      const candidates = action === 'set-mood' ? allTracks.filter((track) => track.mood === requestedMood) : allTracks;
+      const selected = action === 'play-track' ? candidates.find((track) => track.id === trackId) : candidates[0];
+      if (action === 'play-track' && !selected) { json(res, 404, { error: 'That mood track is no longer available.' }); return; }
+      const moodToSave = action === 'set-mood' ? requestedMood : (selected?.mood ?? requestedMood);
+      await sql`UPDATE dj_mood_settings SET active_mood = ${moodToSave}, active_track_id = ${selected?.id ?? null}, active_track_url = ${selected?.url ?? null}, active_track_title = ${selected?.title ?? null}, updated_at = NOW() WHERE id = 'venue'`;
+      json(res, 200, { ok: true, activeMood: moodToSave, activeTrackId: selected?.id ?? null, activeTrackUrl: selected?.url ?? null, activeTrackTitle: selected?.title ?? null });
       return;
     }
     json(res, 400, { error: 'Unknown mood action.' });
