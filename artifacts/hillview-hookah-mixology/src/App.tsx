@@ -2795,6 +2795,7 @@ function MoodPage() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [folderStatus, setFolderStatus] = useState('loading');
   const playlist = useMemo(() => tracks.filter((track) => track.mood === activeMood), [tracks, activeMood]);
 
   async function loadMood() {
@@ -2804,6 +2805,7 @@ function MoodPage() {
       if (!response.ok) throw new Error(data.error || 'Could not load mood library.');
       setTracks(Array.isArray(data.tracks) ? data.tracks : []);
       setActiveMood(data.activeMood || 'Chill');
+      setFolderStatus(data.folderStatus || 'unavailable');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load mood library.');
     } finally { setLoading(false); }
@@ -2865,7 +2867,7 @@ function MoodPage() {
 
         <section className="mb-8 rounded-[2rem] border border-amber-300/20 bg-gradient-to-br from-[#201a12] via-[#151311] to-[#101114] p-5 shadow-2xl shadow-black/30 sm:p-7">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-200/70">CURRENT VENUE MOOD</p><h2 className="hv-display mt-2 text-4xl sm:text-5xl">{activeMood}</h2><p className="mt-2 text-xs text-white/50">{playlist.length} {playlist.length === 1 ? 'track' : 'tracks'} in this playlist</p></div>
+            <div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-200/70">CURRENT VENUE MOOD</p><h2 className="hv-display mt-2 text-4xl sm:text-5xl">{activeMood}</h2><p className="mt-2 text-xs text-white/50">{playlist.length} {playlist.length === 1 ? 'track' : 'tracks'} in this playlist</p>{activeMood === 'Chill' && folderStatus !== 'ready' && <p className="mt-2 max-w-md text-[11px] leading-5 text-amber-100/70">Drive folder not readable yet. Set its sharing to “Anyone with the link” and ensure it contains audio files with names ending in .mp3, .m4a, .wav, .ogg, or similar.</p>}</div>
             <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3"><Music2 size={22} className="text-amber-300" /><p className="mt-2 text-[10px] font-bold tracking-widest text-white/45">MOOD DJ</p></div>
           </div>
           <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
