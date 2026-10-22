@@ -2516,7 +2516,9 @@ function DJPage() {
     setMoodMode(true);
     moodModeRef.current = true;
     try { playerRef.current?.pauseVideo?.(); } catch {}
-    startMoodTrack(0);
+    // Wait for the shared player audio element to mount after switching the viewport.
+    const startTimer = window.setTimeout(() => startMoodTrack(0), 120);
+    return () => window.clearTimeout(startTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMood, moodTracks.find((track) => track.mood === activeMood)?.id]);
 
