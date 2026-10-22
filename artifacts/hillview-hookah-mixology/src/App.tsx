@@ -1738,6 +1738,14 @@ function DJPage() {
   const moodTracksRef = useRef<MoodTrack[]>([]);
   const moodModeRef = useRef(false);
   const moodPollInFlightRef = useRef(false);
+  const moodPreviousVolumeRef = useRef<number | null>(null);
+
+  const restoreMoodAudioVolume = () => {
+    if (moodPreviousVolumeRef.current !== null && moodAudioRef.current) {
+      moodAudioRef.current.volume = moodPreviousVolumeRef.current;
+      moodPreviousVolumeRef.current = null;
+    }
+  };
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -1746,6 +1754,10 @@ function DJPage() {
     // YouTube volume is controlled by the iframe player, so duck it immediately
     // and again just before speech starts. Keep the DJ's exact volume for restore.
     const duckYouTube = () => {
+      if (moodModeRef.current && moodAudioRef.current) {
+        if (moodPreviousVolumeRef.current === null) moodPreviousVolumeRef.current = moodAudioRef.current.volume;
+        moodAudioRef.current.volume = Math.max(0, moodPreviousVolumeRef.current * 0.35);
+      }
       try {
         if (!playerRef.current?.setVolume) return;
         if (advPreviousVolumeRef.current === null && playerRef.current.getVolume) {
@@ -1763,6 +1775,8 @@ function DJPage() {
     duckYouTube();
 
     const finish = () => {
+      restoreMoodAudioVolume();
+      restoreMoodAudioVolume();
       if (advVolumeDuckedRef.current) {
         try {
           const previousVolume = advPreviousVolumeRef.current;
@@ -1917,6 +1931,7 @@ function DJPage() {
     };
 
     const restoreMusic = () => {
+      restoreMoodAudioVolume();
       try {
         if (fadeTimer !== null) window.clearInterval(fadeTimer);
         if (duckRetryTimer !== null) window.clearInterval(duckRetryTimer);
@@ -2873,7 +2888,7 @@ function MoodPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#111216] p-5 sm:p-6">
             <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-300/80">PLAYLIST</p><h2 className="hv-display mt-2 text-3xl">{activeMood} tracks</h2></div><span className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/50">{playlist.length} SONGS</span></div>
             <div className="mt-5 space-y-2">
-              {loading ? <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-white/45">Loading mood library…</p> : playlist.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><Disc3 size={28} className="mx-auto text-amber-300/70" /><p className="mt-3 text-sm font-semibold">No tracks in {activeMood} yet</p><p className="mt-1 text-xs text-white/40">For Chill, check that the Drive folder is shared with anyone who has the link. Other moods can be populated below.</p></div> : playlist.map((track, index) => <div key={track.id} className={\`flex items-center gap-3 rounded-2xl border p-3 \${currentTrack?.id === track.id ? 'border-amber-300/40 bg-amber-300/[0.07]' : 'border-white/[0.07] bg-white/[0.02]'}\`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] font-mono text-xs text-amber-300">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{track.title}</p><p className="mt-1 truncate text-[10px] text-white/40">Google Drive · {track.mood}</p></div><button type="button" onClick={() => playTrack(track)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-black" aria-label={\`Play \${track.title}\`}><Play size={16} fill="currentColor" /></button><button type="button" disabled={busy} onClick={() => void removeTrack(track.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/45 hover:border-red-400/40 hover:text-red-300" aria-label={\`Remove \${track.title}\`}><Trash2 size={15} /></button></div>)}
+              {loading ? <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-white/45">Loading mood library…</p> : playlist.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><Disc3 size={28} className="mx-auto text-amber-300/70" /><p className="mt-3 text-sm font-semibold">No tracks in {activeMood} yet</p><p className="mt-1 text-xs text-white/40">For Chill, check that the Drive folder is shared with anyone who has the link. Other moods can be populated below.</p></div> : playlist.map((track, index) => <div key={track.id} className={\`flex items-center gap-3 rounded-2xl border p-3 \border-white/[0.07] bg-white/[0.02]\`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] font-mono text-xs text-amber-300">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{track.title}</p><p className="mt-1 truncate text-[10px] text-white/40">Google Drive · {track.mood}</p></div><button type="button" onClick={() => playTrack(track)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-black" aria-label={\`Play \${track.title}\`}><Play size={16} fill="currentColor" /></button><button type="button" disabled={busy} onClick={() => void removeTrack(track.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/45 hover:border-red-400/40 hover:text-red-300" aria-label={\`Remove \${track.title}\`}><Trash2 size={15} /></button></div>)}
             </div>
           </section>
         </div>
