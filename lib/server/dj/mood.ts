@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
-import { isValidSession } from '../../manage/_auth';
+import { isValidSession } from '../../../api/manage/_auth';
 
 type Req = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined> };
 type Res = { statusCode: number; setHeader(name: string, value: string | string[]): void; end(body?: string): void };
