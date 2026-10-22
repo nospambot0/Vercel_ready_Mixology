@@ -4,6 +4,7 @@ import adv from '../../lib/server/dj/adv';
 import hkv from '../../lib/server/dj/hkv';
 import announcement from '../../lib/server/dj/announcement';
 import voice from '../../lib/server/dj/voice';
+import mood from '../../lib/server/dj/mood';
 
 function json(res:any,status:number,body:unknown){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify(body));}
 
@@ -17,6 +18,7 @@ export default async function handler(req:any,res:any):Promise<void>{
     if(route==='hkv') return await hkv(req,res);
     if(route==='announcement') return await announcement(req,res);
     if(route==='voice') return await voice(req,res);
+    if(route==='mood') return await mood(req,res);
     return json(res,404,{error:'Unknown DJ API route.'});
   } catch(error) {
     return json(res,500,{error:error instanceof Error?error.message:'DJ API error.'});
