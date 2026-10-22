@@ -516,7 +516,35 @@ function HomeDjQueuePreview() {
 
   useEffect(() => {
     let active = true;
-    const loadQueue = async () => {
+    const startMoodTrack = (index: number) => {
+    const tracks = moodTracksRef.current.filter((track) => track.mood === activeMood);
+    if (!tracks.length) { setNotice(`No playable tracks are available for ${activeMood} yet.`); return; }
+    const nextIndex = ((index % tracks.length) + tracks.length) % tracks.length;
+    const track = tracks[nextIndex];
+    const audio = moodAudioRef.current;
+    if (!audio) return;
+    setMoodTrackIndex(nextIndex);
+    setMoodTrackTitle(track.title);
+    audio.src = driveAudioUrl(track.url);
+    audio.load();
+    void audio.play().then(() => setNotice('')).catch(() => setNotice('Mood playlist is selected, but playback was blocked or this Drive file is not directly playable. Check that the folder and audio files are shared with anyone who has the link.'));
+  };
+
+  const loadMoodState = async () => {
+    if (moodPollInFlightRef.current) return;
+    moodPollInFlightRef.current = true;
+    try {
+      const response = await fetch(`/api/dj/mood?ts=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) return;
+      setMoodTracks(Array.isArray(data.tracks) ? data.tracks : []);
+      setActiveMood(typeof data.activeMood === 'string' ? data.activeMood : 'Chill');
+    } catch {
+      // Mood polling is independent of the queue and must not disrupt existing DJ playback.
+    } finally { moodPollInFlightRef.current = false; }
+  };
+
+  const loadQueue = async () => {
       try {
         const response = await fetch('/api/dj/queue', { cache: 'no-store' });
         if (!response.ok) throw new Error('Could not load the DJ queue.');
@@ -1701,6 +1729,15 @@ function DJPage() {
   const [hkvPlaying, setHkvPlaying] = useState(false);
   const [customAnnouncementPlaying, setCustomAnnouncementPlaying] = useState(false);
   const [customAnnouncementText, setCustomAnnouncementText] = useState('');
+  const [moodTracks, setMoodTracks] = useState<MoodTrack[]>([]);
+  const [activeMood, setActiveMood] = useState('');
+  const [moodMode, setMoodMode] = useState(false);
+  const [moodTrackTitle, setMoodTrackTitle] = useState('');
+  const [moodTrackIndex, setMoodTrackIndex] = useState(0);
+  const moodAudioRef = useRef<HTMLAudioElement | null>(null);
+  const moodTracksRef = useRef<MoodTrack[]>([]);
+  const moodModeRef = useRef(false);
+  const moodPollInFlightRef = useRef(false);
 
   const playAdvAnnouncement = () => {
     if (advPlaying) return;
@@ -2319,6 +2356,8 @@ function DJPage() {
   const youtubeUnlockedRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<any>(null);
+  moodTracksRef.current = moodTracks;
+  moodModeRef.current = moodMode;
   const playerReadyRef = useRef(false);
   const activeVideoIdRef = useRef<string | null>(null);
   const queueMutationAtRef = useRef(0);
@@ -2388,8 +2427,11 @@ function DJPage() {
     window.addEventListener('click', unlockAudio);
     void loadQueue();
     const timer = window.setInterval(() => void loadQueue(), 1000);
+    void loadMoodState();
+    const moodTimer = window.setInterval(() => void loadMoodState(), 2000);
     return () => {
       window.clearInterval(timer);
+      window.clearInterval(moodTimer);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('click', unlockAudio);
     };
@@ -2461,6 +2503,22 @@ function DJPage() {
       if (action === 'next') window.setTimeout(() => { advanceInFlightRef.current = false; }, 1200);
     }
   };
+
+  useEffect(() => {
+    const availableTracks = moodTracks.filter((track) => track.mood === activeMood);
+    if (!activeMood || !availableTracks.length) {
+      if (activeMood) {
+        setMoodMode(false);
+        moodModeRef.current = false;
+      }
+      return;
+    }
+    setMoodMode(true);
+    moodModeRef.current = true;
+    try { playerRef.current?.pauseVideo?.(); } catch {}
+    startMoodTrack(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMood, moodTracks.find((track) => track.mood === activeMood)?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2537,9 +2595,20 @@ function DJPage() {
     const setAction = (action: string, handler: () => void) => {
       try { mediaSession.setActionHandler(action, handler); } catch {}
     };
-    setAction('play', () => { try { playerRef.current?.playVideo?.(); } catch {} });
-    setAction('pause', () => { try { playerRef.current?.pauseVideo?.(); } catch {} });
-    setAction('nexttrack', () => void control('next'));
+    setAction('play', () => { try { if (moodModeRef.current) void moodAudioRef.current?.play(); else playerRef.current?.playVideo?.(); } catch {} });
+    setAction('pause', () => { try { if (moodModeRef.current) moodAudioRef.current?.pause(); else playerRef.current?.pauseVideo?.(); } catch {} });
+    setAction('nexttrack', () => {
+      if (moodModeRef.current) {
+        const tracks = moodTracksRef.current.filter((track) => track.mood === activeMood);
+        const currentIndex = Math.max(0, tracks.findIndex((track) => track.title === moodTrackTitle));
+        const next = tracks[(currentIndex + 1) % Math.max(1, tracks.length)];
+        if (next) {
+          const audio = moodAudioRef.current;
+          if (audio) { audio.src = driveAudioUrl(next.url); audio.load(); void audio.play().catch(() => {}); }
+          setMoodTrackTitle(next.title);
+        }
+      } else void control('next');
+    });
     return () => {
       for (const action of ['play', 'pause', 'nexttrack']) {
         try { mediaSession.setActionHandler(action, null); } catch {}
@@ -2548,7 +2617,7 @@ function DJPage() {
   }, []);
 
   useEffect(() => {
-    if (!current || !playerReadyRef.current || !playerRef.current) return;
+    if (moodMode || !current || !playerReadyRef.current || !playerRef.current) return;
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
     try {
@@ -2576,7 +2645,7 @@ function DJPage() {
         try { playerRef.current?.playVideo?.(); } catch {}
       }, 0);
     }
-  }, [current?.id, current?.title, playerReady]);
+  }, [current?.id, current?.title, playerReady, moodMode]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -2628,11 +2697,20 @@ function DJPage() {
         {notice && <div className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-xs font-semibold text-destructive" role="alert">{notice}</div>}
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
-            <div className="flex items-center justify-between gap-3"><div className="min-w-0"><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{current?.title || 'No song selected'}</h2>{current && <p className="mt-2 text-xs font-semibold text-muted-foreground">Requested by <span className="text-foreground">{current.requesterName || 'Guest'}</span></p>}</div><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
-            <div className="mt-5 aspect-video overflow-hidden rounded-3xl bg-black"><div id="dj-youtube-player" className="h-full w-full" /></div>
-            {!current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
-            {current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || !current} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || !current} onClick={() => { if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working} onClick={() => void control('next')} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
+            <div className="flex items-center justify-between gap-3"><div className="min-w-0"><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{moodMode ? (moodTrackTitle || activeMood + ' playlist') : (current?.title || 'No song selected')}</h2>{!moodMode && current && <p className="mt-2 text-xs font-semibold text-muted-foreground">Requested by <span className="text-foreground">{current.requesterName || 'Guest'}</span></p>}</div><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>
+            <div className="mt-5 min-h-24 overflow-hidden rounded-3xl bg-black">
+              {moodMode ? (
+                <div className="flex min-h-24 flex-col justify-center p-4">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-200"><Disc3 size={15} /> MOOD PLAYBACK · {activeMood}</div>
+                  <p className="truncate text-sm font-semibold text-white">{moodTrackTitle || 'Loading mood track…'}</p>
+                  <audio ref={moodAudioRef} className="mt-3 w-full accent-amber-300" controls onEnded={() => startMoodTrack(moodTrackIndex + 1)} onError={() => setNotice('Could not stream this Drive file. Make sure the file is audio and shared as “Anyone with the link”.')} />
+                </div>
+              ) : <div id="dj-youtube-player" className="aspect-video h-full w-full" />}
+            </div>
+            {!moodMode && !current && <div className="mt-4 rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">The queue is waiting.</div>}
+            {moodMode && <div className="mt-4 flex items-center gap-2 text-xs text-amber-200"><Disc3 size={15} /> Shared venue mood playlist · {activeMood}</div>}
+            {!moodMode && current && <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><Youtube size={15} /> YouTube</div>}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><button type="button" disabled={working || (!current && !moodMode)} onClick={() => { if (audioContextRef.current?.state === 'suspended') void audioContextRef.current.resume(); if (moodMode) void moodAudioRef.current?.play().catch(() => setNotice('Press play again to start mood audio.')); else if (playerRef.current) playerRef.current.playVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50"><Play size={17} /> Play</button><button type="button" disabled={working || (!current && !moodMode)} onClick={() => { if (moodMode) moodAudioRef.current?.pause(); else if (playerRef.current) playerRef.current.pauseVideo(); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50">Pause</button><button type="button" disabled={working || (moodMode && !moodTracks.some((track) => track.mood === activeMood))} onClick={() => { if (moodMode) startMoodTrack(moodTrackIndex + 1); else void control('next'); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-5 text-sm font-bold hover:bg-muted disabled:opacity-50"><SkipForward size={17} /> Next</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerAdvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-secondary/50 bg-secondary/10 px-5 text-sm font-black text-secondary-foreground hover:bg-secondary/20 disabled:opacity-50" data-testid="button-dj-adv"><Megaphone size={17} /> {advPlaying ? "ADV • PLAYING" : "ADV"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={playIntroAnnouncement} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-intro"><Megaphone size={17} /> {introPlaying ? "INTRO • PLAYING" : "INTRO"}</button><button type="button" disabled={advPlaying || hkvPlaying || introPlaying || customAnnouncementPlaying} onClick={triggerHkvForAllStaffTabs} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/50 bg-primary/10 px-5 text-sm font-black text-primary hover:bg-primary/20 disabled:opacity-50" data-testid="button-dj-hkv"><Megaphone size={17} /> {hkvPlaying ? "HKV • PLAYING" : "HKV"}</button></div>
             <form onSubmit={triggerCustomAnnouncement} className="mt-4 rounded-2xl border border-secondary/30 bg-secondary/5 p-4">
               <SectionEyebrow>CUSTOM ANNOUNCEMENT</SectionEyebrow>
               <h3 className="hv-display text-2xl">Speak to every staff device</h3>
@@ -2696,11 +2774,9 @@ function MoodPage() {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [newMood, setNewMood] = useState('Chill');
-  const [currentTrack, setCurrentTrack] = useState<MoodTrack | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const playlist = useMemo(() => tracks.filter((track) => track.mood === activeMood), [tracks, activeMood]);
 
   async function loadMood() {
@@ -2745,24 +2821,16 @@ function MoodPage() {
     const result = await sendAction({ action: 'set-mood', mood });
     if (result) {
       setActiveMood(mood);
-      setCurrentTrack(null);
-      setNotice('Venue mood changed to ' + mood + '.');
-      if (audioRef.current) audioRef.current.pause();
+      setNotice('Venue mood changed to ' + mood + '. The shared venue DJ player will switch on its next sync.');
     }
   }
   async function removeTrack(id: string) {
-    if (currentTrack?.id === id) { audioRef.current?.pause(); setCurrentTrack(null); }
     const result = await sendAction({ action: 'delete', id });
     if (result) setNotice('Track removed from the library.');
   }
   function playTrack(track: MoodTrack) {
-    setCurrentTrack(track);
-    window.setTimeout(() => { void audioRef.current?.play().catch(() => setNotice('Playback was blocked or this Drive file is not directly playable. Check that the file is shared for viewing.')); }, 120);
-  }
-  function playNext() {
-    if (!playlist.length) return;
-    const index = currentTrack ? playlist.findIndex((track) => track.id === currentTrack.id) : -1;
-    playTrack(playlist[(index + 1) % playlist.length]);
+    void chooseMood(track.mood);
+    setNotice('Switched the venue to the ' + track.mood + ' playlist. Playback is handled by the shared DJ player.');
   }
 
   return (
@@ -2772,7 +2840,7 @@ function MoodPage() {
           <div>
             <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-bold tracking-[0.24em] text-amber-300"><span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_#fcd34d]" /> MIXOLOGY / MOOD CONTROL</div>
             <h1 className="hv-display text-5xl leading-none sm:text-6xl">Set the <span className="text-amber-300">mood.</span></h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">Build mood-based playlists from your Google Drive library and choose the sound for the venue.</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">Choose a mood to switch the shared venue DJ player. Chill is mapped to your Google Drive folder.</p>
           </div>
           <Link href="/manage" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 text-xs font-bold text-white/75 hover:border-amber-300/50 hover:text-amber-200"><ArrowLeft size={15} /> Dashboard</Link>
         </div>
@@ -2791,7 +2859,7 @@ function MoodPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#111216] p-5 sm:p-6">
             <p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-300/80">ADD TO LIBRARY</p>
             <h2 className="hv-display mt-2 text-3xl">Add a track</h2>
-            <p className="mt-2 text-xs leading-5 text-white/45">Paste a Google Drive link to an audio file. The file must be shared so the player can access it.</p>
+            <p className="mt-2 text-xs leading-5 text-white/45">Chill is connected to your Drive folder. Other moods can use individual Drive audio-file links; files must be shared so the player can access them.</p>
             <form onSubmit={(event) => void addTrack(event)} className="mt-5 space-y-4">
               <label className="block text-xs font-semibold text-white/70">Song title<input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Midnight in Mumbai" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none focus:border-amber-300/60" /></label>
               <label className="block text-xs font-semibold text-white/70">Google Drive link<input required type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://drive.google.com/file/d/…" className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none focus:border-amber-300/60" /></label>
@@ -2803,18 +2871,16 @@ function MoodPage() {
           <section className="rounded-[2rem] border border-white/10 bg-[#111216] p-5 sm:p-6">
             <div className="flex items-end justify-between gap-3"><div><p className="font-mono text-[10px] font-bold tracking-[0.2em] text-amber-300/80">PLAYLIST</p><h2 className="hv-display mt-2 text-3xl">{activeMood} tracks</h2></div><span className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-bold text-white/50">{playlist.length} SONGS</span></div>
             <div className="mt-5 space-y-2">
-              {loading ? <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-white/45">Loading mood library…</p> : playlist.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><Disc3 size={28} className="mx-auto text-amber-300/70" /><p className="mt-3 text-sm font-semibold">No tracks in {activeMood} yet</p><p className="mt-1 text-xs text-white/40">Add a Drive song and assign this mood.</p></div> : playlist.map((track, index) => <div key={track.id} className={\`flex items-center gap-3 rounded-2xl border p-3 \${currentTrack?.id === track.id ? 'border-amber-300/40 bg-amber-300/[0.07]' : 'border-white/[0.07] bg-white/[0.02]'}\`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] font-mono text-xs text-amber-300">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{track.title}</p><p className="mt-1 truncate text-[10px] text-white/40">Google Drive · {track.mood}</p></div><button type="button" onClick={() => playTrack(track)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-black" aria-label={\`Play \${track.title}\`}><Play size={16} fill="currentColor" /></button><button type="button" disabled={busy} onClick={() => void removeTrack(track.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/45 hover:border-red-400/40 hover:text-red-300" aria-label={\`Remove \${track.title}\`}><Trash2 size={15} /></button></div>)}
+              {loading ? <p className="rounded-xl bg-white/[0.03] p-5 text-sm text-white/45">Loading mood library…</p> : playlist.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center"><Disc3 size={28} className="mx-auto text-amber-300/70" /><p className="mt-3 text-sm font-semibold">No tracks in {activeMood} yet</p><p className="mt-1 text-xs text-white/40">For Chill, check that the Drive folder is shared with anyone who has the link. Other moods can be populated below.</p></div> : playlist.map((track, index) => <div key={track.id} className={\`flex items-center gap-3 rounded-2xl border p-3 \${currentTrack?.id === track.id ? 'border-amber-300/40 bg-amber-300/[0.07]' : 'border-white/[0.07] bg-white/[0.02]'}\`}><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] font-mono text-xs text-amber-300">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{track.title}</p><p className="mt-1 truncate text-[10px] text-white/40">Google Drive · {track.mood}</p></div><button type="button" onClick={() => playTrack(track)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-black" aria-label={\`Play \${track.title}\`}><Play size={16} fill="currentColor" /></button><button type="button" disabled={busy} onClick={() => void removeTrack(track.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/45 hover:border-red-400/40 hover:text-red-300" aria-label={\`Remove \${track.title}\`}><Trash2 size={15} /></button></div>)}
             </div>
           </section>
         </div>
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-[#111216] p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-4">
+        <section className="mt-6 rounded-[2rem] border border-amber-300/20 bg-[#111216] p-5 sm:p-6">
+          <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-300"><Disc3 size={27} /></div>
-            <div className="min-w-0 flex-1"><p className="font-mono text-[9px] font-bold tracking-[0.2em] text-amber-300/70">NOW PLAYING · LOCAL PREVIEW</p><p className="mt-1 truncate text-sm font-semibold">{currentTrack?.title || 'Choose a track to preview'}</p><p className="mt-1 text-[10px] text-white/40">{currentTrack ? currentTrack.mood + ' playlist' : 'Playback starts when you press play on a song.'}</p></div>
-            <button type="button" onClick={playNext} disabled={!playlist.length} className="flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/30 px-4 text-xs font-bold text-amber-200 disabled:opacity-40"><SkipForward size={15} /> Next</button>
+            <div><p className="font-mono text-[9px] font-bold tracking-[0.2em] text-amber-300/70">SHARED VENUE PLAYER</p><p className="mt-1 text-sm font-semibold">Mood selection controls the existing DJ player</p><p className="mt-1 text-[10px] text-white/40">Keep /manage/dj open on the device connected to your sound system.</p></div>
           </div>
-          <audio ref={audioRef} className="mt-4 w-full accent-amber-300" controls src={currentTrack ? driveAudioUrl(currentTrack.url) : undefined} onEnded={playNext} onError={() => setNotice('Could not play this Drive file. Check its sharing permission or use a direct audio URL.')} />
         </section>
         {notice && <div role="status" className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-xs leading-5 text-amber-100/80">{notice}</div>}
         <p className="mt-5 text-center text-[10px] leading-5 text-white/30">Mood and track settings are saved centrally. Audio preview plays on this device; Google Drive links must allow playback access.</p>
