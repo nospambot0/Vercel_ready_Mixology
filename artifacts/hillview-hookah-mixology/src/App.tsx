@@ -3347,6 +3347,56 @@ function AgeGate() {
   );
 }
 
+function DiwaliGreeting() {
+  const [location] = useLocation();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (location !== '/') return;
+    let dismissed = false;
+    let showTimer: ReturnType<typeof setTimeout> | undefined;
+    const checkAgeGate = window.setInterval(() => {
+      try {
+        if (localStorage.getItem('hillview-age-verified') === 'true') {
+          window.clearInterval(checkAgeGate);
+          if (dismissed) return;
+          setVisible(true);
+          showTimer = window.setTimeout(() => setVisible(false), 3000);
+        }
+      } catch {
+        window.clearInterval(checkAgeGate);
+      }
+    }, 200);
+    return () => {
+      dismissed = true;
+      window.clearInterval(checkAgeGate);
+      if (showTimer) window.clearTimeout(showTimer);
+    };
+  }, [location]);
+
+  if (!visible) return null;
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[90] flex items-center justify-center overflow-hidden px-5" aria-live="polite">
+      <style>{`
+        @keyframes diwali-popup-in { 0% { opacity: 0; transform: translateY(18px) scale(.92); } 18% { opacity: 1; transform: translateY(0) scale(1); } 78% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-10px) scale(.98); } }
+        @keyframes diwali-sparkle { 0%,100% { opacity: .25; transform: scale(.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(35deg); } }
+        @keyframes diwali-flame { 0%,100% { transform: rotate(-4deg) scaleY(.96); } 50% { transform: rotate(4deg) scaleY(1.08); } }
+      `}</style>
+      <div className="relative w-full max-w-md rounded-[2rem] border border-amber-300/50 bg-[#100b08]/95 px-7 py-8 text-center shadow-[0_0_90px_rgba(245,158,11,.28)] backdrop-blur-xl" style={{ animation: 'diwali-popup-in 3000ms ease both' }}>
+        <span className="absolute left-7 top-6 text-amber-300" style={{ animation: 'diwali-sparkle 1.2s ease-in-out infinite' }}>✦</span>
+        <span className="absolute right-8 top-9 text-yellow-100" style={{ animation: 'diwali-sparkle 1.5s ease-in-out infinite .2s' }}>✧</span>
+        <span className="absolute bottom-7 left-10 text-yellow-200" style={{ animation: 'diwali-sparkle 1.4s ease-in-out infinite .4s' }}>✧</span>
+        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-amber-300/40 bg-amber-400/10 text-5xl shadow-[0_0_38px_rgba(251,191,36,.22)]" style={{ animation: 'diwali-flame 1.1s ease-in-out infinite' }} role="img" aria-label="Lit diya">🪔</div>
+        <p className="hv-mono text-[9px] tracking-[.35em] text-amber-200/75">LIGHT • JOY • PROSPERITY</p>
+        <h2 className="hv-display mt-2 text-4xl font-semibold tracking-wide text-amber-200 sm:text-5xl">Happy Diwali</h2>
+        <p className="mt-3 text-xs tracking-[.18em] text-amber-50/75">WISHING YOU A BRIGHT & BEAUTIFUL YEAR</p>
+        <div className="mx-auto mt-5 h-px w-24 bg-gradient-to-r from-transparent via-amber-300 to-transparent" />
+        <p className="mt-4 font-serif text-sm italic text-amber-100/85">Celebrate every moment. Shine a little brighter.</p>
+      </div>
+    </div>
+  );
+}
+
 function AppContent({
   choice,
   setChoice,
