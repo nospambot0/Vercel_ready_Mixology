@@ -6,6 +6,7 @@ import { CATALOG_STORAGE_KEY, readCatalog } from './logic/catalog';
 import { getRecommendations, type Recommendation } from './logic/recommendationEngine';
 import { getBatchRecipe } from './logic/recipe';
 import { getWhatsAppUrl } from './logic/whatsapp';
+import DJAutoPrint from './components/DJAutoPrint';
 import type { Catalog, Choice, CustomLevel, FinderAnswers } from './types';
 
 const STORAGE_KEY = 'mixology-pro-current-choice';
@@ -2318,6 +2319,7 @@ function DJPage() {
   const audioUnlockedRef = useRef(false);
   const youtubeUnlockedRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [playerIsPlaying, setPlayerIsPlaying] = useState(false);
   const playerRef = useRef<any>(null);
   const playerReadyRef = useRef(false);
   const activeVideoIdRef = useRef<string | null>(null);
@@ -2489,6 +2491,7 @@ function DJPage() {
               try { return String(event.target?.getVideoData?.()?.video_id || '') || null; } catch { return null; }
             })();
             if (event.data === YTState?.PLAYING) {
+              setPlayerIsPlaying(true);
               try {
                 const MediaSession = (navigator as any).mediaSession;
                 if (MediaSession) {
@@ -2501,14 +2504,17 @@ function DJPage() {
                 }
               } catch {}
             } else if (event.data === YTState?.PAUSED) {
+              setPlayerIsPlaying(false);
               try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'paused'); } catch {}
             } else if (event.data === YTState?.ENDED) {
+              setPlayerIsPlaying(false);
               if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
               try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'none'); } catch {}
               void control('next');
             }
           },
           onError: (event: any) => {
+            setPlayerIsPlaying(false);
             if ([5, 100, 101, 150, 153].includes(event.data)) {
               if (eventVideoId && activeVideoIdRef.current && eventVideoId !== activeVideoIdRef.current) return;
               setNotice('This YouTube video cannot be played in the embedded player. Skipping it.');
@@ -2626,6 +2632,7 @@ function DJPage() {
           </div>
         </div>
         {notice && <div className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-xs font-semibold text-destructive" role="alert">{notice}</div>}
+        <DJAutoPrint current={current} playing={playerIsPlaying} />
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="hv-surface rounded-[2rem] p-5 md:p-7">
             <div className="flex items-center justify-between gap-3"><div className="min-w-0"><SectionEyebrow>NOW PLAYING</SectionEyebrow><h2 className="hv-display text-3xl md:text-4xl">{current?.title || 'No song selected'}</h2>{current && <p className="mt-2 text-xs font-semibold text-muted-foreground">Requested by <span className="text-foreground">{current.requesterName || 'Guest'}</span></p>}</div><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/15 text-secondary"><Music2 size={24} /></div></div>

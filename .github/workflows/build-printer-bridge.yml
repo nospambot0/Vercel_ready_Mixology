@@ -1,0 +1,35 @@
+name: Build Mixology Printer Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "printer-bridge/**"
+      - ".github/workflows/build-printer-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r printer-bridge/requirements.txt pyinstaller
+      - name: Build standalone executable
+        run: |
+          pyinstaller --noconfirm --clean --onefile --name MixologyPrinterBridge --collect-all bleak --collect-all uvicorn --collect-all fastapi printer-bridge/bridge.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MixologyPrinterBridge-Windows-x64
+          path: dist/MixologyPrinterBridge.exe
+          if-no-files-found: error
+          retention-days: 30
