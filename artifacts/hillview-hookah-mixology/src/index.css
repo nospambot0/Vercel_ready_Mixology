@@ -818,3 +818,162 @@ body {
     }
   }
 }
+
+
+/* Spotify Dark design system — Mixology PRO */
+:root,
+.dark {
+  color-scheme: dark;
+  --background: 0 0% 7.1%;
+  --foreground: 0 0% 100%;
+  --border: 0 0% 22%;
+  --card: 0 0% 11.8%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 0 0% 22%;
+  --sidebar: 0 0% 7.1%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-primary: 141 76% 48%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 0 0% 14%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 141 76% 48%;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 100%;
+  --popover-border: 0 0% 22%;
+  --primary: 0 0% 7.1%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 141 76% 48%;
+  --secondary-foreground: 0 0% 0%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 70%;
+  --accent: 141 76% 48%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 100% 71%;
+  --destructive-foreground: 0 0% 7%;
+  --input: 0 0% 18%;
+  --ring: 141 76% 48%;
+  --chart-1: 141 76% 48%;
+  --chart-2: 0 0% 80%;
+  --chart-3: 0 0% 58%;
+  --chart-4: 141 55% 35%;
+  --chart-5: 0 0% 38%;
+  --app-font-sans: 'Inter', 'Spotify Mix UI', Arial, sans-serif;
+  --app-font-serif: 'Inter', Arial, sans-serif;
+  --app-font-mono: 'DM Mono', ui-monospace, monospace;
+  --radius: .5rem;
+  --button-outline: rgba(255,255,255,.16);
+  --badge-outline: rgba(255,255,255,.12);
+  --elevate-1: rgba(255,255,255,.04);
+  --elevate-2: rgba(255,255,255,.08);
+}
+
+html,
+body {
+  background: #121212;
+  color: #fff;
+  font-family: 'Inter', 'Spotify Mix UI', Arial, sans-serif;
+}
+
+.hv-app {
+  color: #fff;
+  background: #121212;
+}
+
+.hv-app::before {
+  background:
+    radial-gradient(760px 420px at 8% -8%, rgba(30,215,96,.07), transparent 66%),
+    radial-gradient(720px 440px at 100% 12%, rgba(255,255,255,.025), transparent 68%) !important;
+}
+
+.hv-app .hv-surface,
+.hv-app .rounded-2xl.border,
+.hv-app .rounded-3xl.border {
+  background-color: #1e1e1e;
+  border-color: #374151;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.hv-app .hv-surface:hover {
+  border-color: rgba(30,215,96,.55);
+  box-shadow: 0 8px 24px -20px rgba(30,215,96,.5);
+}
+
+.hv-app button,
+.hv-app a[role="button"] {
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+.hv-app button[class*="bg-secondary"],
+.hv-app a[class*="bg-secondary"] {
+  background-color: #1ed760;
+  color: #000;
+  border-color: #1ed760;
+}
+
+.hv-app button[class*="bg-primary"],
+.hv-app a[class*="bg-primary"] {
+  background-color: #fff;
+  color: #000;
+}
+
+.hv-app input,
+.hv-app select,
+.hv-app textarea {
+  color: #fff;
+  background: #1e1e1e;
+  border-color: #374151;
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+.hv-app input:focus,
+.hv-app select:focus,
+.hv-app textarea:focus {
+  border-color: #1ed760;
+  background: #242424;
+  box-shadow: 0 0 0 2px rgba(30,215,96,.18);
+}
+
+.hv-app nav[aria-label="Primary navigation"] {
+  background: rgba(30,30,30,.96);
+  border-color: #374151;
+  box-shadow: 0 12px 36px rgba(0,0,0,.35);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.hv-app nav[aria-label="Primary navigation"] a[class*="bg-primary"],
+.hv-app nav[aria-label="Primary navigation"] button[class*="bg-primary"] {
+  background: #1ed760;
+  color: #000;
+}
+
+.hv-app [role="dialog"] {
+  background-color: #1e1e1e;
+  border-color: #374151;
+  box-shadow: 0 28px 80px rgba(0,0,0,.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.hv-app .ingredient-orb {
+  border-color: rgba(255,255,255,.16);
+}
+
+.hv-app * {
+  scrollbar-color: #555 #121212;
+}
+
+.hv-app *::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+@media (max-width: 767px) {
+  .hv-app nav[aria-label="Primary navigation"] {
+    background: rgba(30,30,30,.98);
+  }
+}
